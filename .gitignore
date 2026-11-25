@@ -1,0 +1,6 @@
+.env
+garmin_data.js
+.DS_Store
+__pycache__/
+.claude/
+design/

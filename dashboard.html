@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Running Dashboard</title>
+<!-- The only network request this page makes: the Figtree font. If it fails, system fonts are used. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@property --n{syntax:'<integer>';inherits:false;initial-value:0}
+:root{
+  --bg:#F4F7F5; --surface:#FFFFFF; --surface2:#EEF3F0; --ink:#10231F; --ink2:#41524D; --muted:#5B6B66; --line:#DFE7E3;
+  --accent:#0E6B66; --accent-ink:#FFFFFF; --bar:#C5D3CE;
+  --warn:#F2A900; --bad:#D03B3B;
+  --warn-bg:#FFF3D1; --warn-bd:#F2D58A; --bad-bg:#FBE4E1; --bad-bd:#EDB0A9;
+  --info-bg:#E3EEFA; --info-bd:#B7D2EE; --care-bg:#F1E8F8; --care-bd:#D8C3E9; --period:#E9A6BE;
+  --c1:#ECF2EF; --c2:#F3F0E8; --c3:#E9F0F3; --c4:#F0EDF3;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0C1614; --surface:#14221F; --surface2:#1A2B27; --ink:#EAF2EF; --ink2:#BCCBC6; --muted:#93A39D; --line:#26372F;
+    --accent:#4CC2B8; --accent-ink:#04201D; --bar:#35504A;
+    --warn:#F2B72E; --bad:#E5605C;
+    --warn-bg:#3A2F0B; --warn-bd:#6B5617; --bad-bg:#3D1816; --bad-bd:#7A2E29;
+    --info-bg:#162B40; --info-bd:#2B4E73; --care-bg:#2B1F3A; --care-bd:#5A4379; --period:#B5607F;
+    --c1:#101E1B; --c2:#1A1913; --c3:#0F1B20; --c4:#1A1620;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0C1614; --surface:#14221F; --surface2:#1A2B27; --ink:#EAF2EF; --ink2:#BCCBC6; --muted:#93A39D; --line:#26372F;
+  --accent:#4CC2B8; --accent-ink:#04201D; --bar:#35504A;
+  --warn:#F2B72E; --bad:#E5605C;
+  --warn-bg:#3A2F0B; --warn-bd:#6B5617; --bad-bg:#3D1816; --bad-bd:#7A2E29;
+  --info-bg:#162B40; --info-bd:#2B4E73; --care-bg:#2B1F3A; --care-bd:#5A4379; --period:#B5607F;
+  --c1:#101E1B; --c2:#1A1913; --c3:#0F1B20; --c4:#1A1620;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:16px;line-height:1.5}
+button{font-family:inherit;cursor:pointer;color:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+h1,h2,h3,p{margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+@media(min-width:900px){.wrap{padding:0 32px}}
+.muted{color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 22px;min-height:48px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:16px}
+.btn-primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.field{width:100%;min-height:48px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);padding:0 14px;font-family:inherit;font-size:16px}
+.pos{position:relative}
+.tag{font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;border:1px solid var(--line);color:var(--ink2);white-space:nowrap}
+
+/* dev control */
+
+/* header */
+.hdr{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:16px;padding-bottom:4px}
+.sync{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.icon-btn{width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1fr auto;gap:28px;align-items:center;padding:clamp(20px,3.2vw,36px);border-radius:28px;border:1px solid var(--line);margin-top:12px}
+@media(max-width:720px){.hero{grid-template-columns:1fr;gap:16px;border-radius:24px}.ringbox{order:-1}}
+.verdict{font-size:clamp(38px,7vw,64px);font-weight:800;letter-spacing:-0.035em;line-height:1.04}
+.line{font-size:clamp(16px,2vw,19px);color:var(--ink2);max-width:40ch;margin-top:10px}
+.today{margin-top:clamp(14px,2.2vw,22px);padding-top:clamp(12px,1.8vw,16px);border-top:1px solid var(--line)}
+.ringbox{position:relative;width:clamp(104px,15vw,152px);aspect-ratio:1}
+.ringbox svg{width:100%;height:100%;display:block}
+.ringnum{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.ringnum .big{font-size:clamp(30px,4.6vw,44px);font-weight:800;letter-spacing:-0.03em;line-height:1}
+.ring{stroke-dashoffset:var(--off)}
+.count{--n:var(--to,0);counter-reset:num var(--n)}
+.count::after{content:counter(num)}
+.strip{margin-top:10px;padding:12px 20px;border-radius:18px;background:var(--surface2);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 20px}
+.track{flex:1 1 100%;height:4px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:4px}
+.track>div{height:100%;background:var(--ink2);border-radius:99px}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}
+@media(max-width:640px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.metric{background:var(--surface);border:0;border-radius:16px;text-align:left;padding:12px 14px;display:flex;flex-direction:column;gap:0;min-height:96px}
+.metric:hover,.metric[aria-expanded="true"]{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.mval{font-size:26px;font-weight:700;letter-spacing:-0.02em;line-height:1.15}
+.mval small{font-size:13px;font-weight:500;color:var(--muted);margin-left:4px}
+.mlab{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.spk{position:relative;display:block;height:22px;margin-top:8px}
+.mdetail{margin-top:8px;padding:16px 20px;border-radius:18px;background:var(--surface)}
+
+/* banners */
+.banner{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:16px}
+
+/* sections */
+.sect{padding-top:clamp(32px,5.5vw,64px)}
+.h2{font-size:clamp(22px,2.6vw,28px);font-weight:700;letter-spacing:-0.02em}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin-top:14px}
+.day{padding:14px 14px;border-radius:18px;background:var(--surface);border:1.5px solid transparent;display:flex;flex-direction:column;gap:2px;min-height:112px;min-width:0}
+.day.today{border-color:var(--ink)}
+.dname{font-weight:700}
+.dname span{color:var(--muted);font-weight:500;margin-left:6px}
+.dtype{color:var(--ink2);font-size:14px;margin-top:4px}
+.dkm{font-size:22px;font-weight:700;letter-spacing:-0.02em}
+.dstate{margin-top:auto;min-height:24px;display:flex;align-items:center}
+@media(max-width:860px){.week{grid-template-columns:1fr;gap:6px}.day{flex-direction:row;align-items:center;gap:12px;min-height:0;padding:12px 16px}.dname{flex:0 0 76px}.dtype{margin:0;flex:1}.dstate{margin:0;min-height:0}}
+
+/* chapters */
+.chap{padding:clamp(44px,6.5vw,76px) 0;margin-top:clamp(32px,5.5vw,64px);background:var(--tone,var(--bg))}
+.chead{font-size:clamp(26px,3.6vw,38px);font-weight:800;letter-spacing:-0.03em;line-height:1.1;max-width:20ch}
+.csub{font-size:clamp(16px,1.8vw,18px);color:var(--ink2);max-width:44ch;margin-top:10px}
+.cgrid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(20px,3.5vw,44px);align-items:start}
+.cgrid.r48{grid-template-columns:minmax(0,4fr) minmax(0,8fr)}
+@media(max-width:900px){.cgrid,.cgrid.r48{grid-template-columns:1fr;gap:20px}}
+.pair{display:flex;flex-wrap:wrap;gap:16px}
+.pair>*{flex:1 1 420px;min-width:0}
+.panel{background:var(--surface);border-radius:24px;padding:clamp(16px,2.6vw,26px)}
+.more{margin-top:12px;background:none;border:0;padding:0 4px;min-height:48px;font-weight:700;font-size:16px;text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:2px;display:inline-flex;align-items:center}
+.bigv{font-size:clamp(40px,6vw,60px);font-weight:800;letter-spacing:-0.04em;line-height:1}
+.bigv.sm{font-size:clamp(30px,4vw,40px)}
+.minis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:18px}
+.mini{background:var(--surface);border-radius:16px;padding:12px 14px;min-width:0}
+.mv{font-size:24px;font-weight:700;letter-spacing:-0.02em;line-height:1.15}
+.ml{font-size:13px;color:var(--muted);line-height:1.3;margin-top:2px}
+.runrow{width:100%;display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px;padding:14px 4px;background:none;border:0;text-align:left;min-height:56px}
+.rs{flex:0 0 auto;min-width:64px;font-weight:700;font-size:17px}
+.rs small{font-size:13px;font-weight:500;color:var(--muted)}
+.fb{display:flex;flex-direction:column;gap:14px;padding:2px 4px 20px}
+.fbrow{display:flex;flex-wrap:wrap;gap:2px 20px}
+.fbk{flex:0 0 100px;font-weight:700;display:flex;gap:8px;align-items:flex-start}
+.fbv{flex:1 1 260px;color:var(--ink2)}
+.tiles3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media(max-width:600px){.tiles3{grid-template-columns:1fr}}
+.stat{background:var(--surface2);border-radius:16px;padding:14px 16px}
+.times{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.tm{padding:8px 10px;border-radius:14px;background:var(--surface2);min-width:0}
+.tm.sel{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.tm b{display:block;font-size:16px;letter-spacing:-0.01em}
+.tm span{font-size:13px;color:var(--muted)}
+
+/* motion: only when the user has no reduced motion preference */
+@media (prefers-reduced-motion:no-preference){
+  .reveal:not(.in) .count{--n:0}
+  .reveal.in .count{animation:cnt .55s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes cnt{from{--n:0}}
+  .ring{transition:stroke-dashoffset .6s cubic-bezier(.2,.7,.2,1)}
+  .reveal:not(.in) .ring{stroke-dashoffset:339.3}
+  .draw{clip-path:inset(-12px -12px -12px -12px);transition:clip-path .55s ease-out}
+  .reveal:not(.in) .draw{clip-path:inset(-12px 100% -12px -12px)}
+  .grow{transform-origin:50% 100%;transition:transform .5s cubic-bezier(.2,.7,.2,1);transition-delay:calc(var(--i,0) * 25ms)}
+  .reveal:not(.in) .grow{transform:scaleY(0)}
+  .fadein{transition:opacity .5s ease,transform .5s ease}
+  .reveal:not(.in) .fadein{opacity:0;transform:translateY(10px)}
+  .stag{transition:opacity .36s ease,transform .36s ease;transition-delay:calc(var(--i,0) * 35ms)}
+  .reveal:not(.in) .stag{opacity:0;transform:translateY(12px)}
+  .chap{transition:background-color .6s ease}
+  .chap:not(.in){background:var(--bg)}
+  .expand{animation:up .3s ease both}
+  @keyframes up{from{opacity:0;transform:translateY(6px)}}
+}
+.progress{display:none}
+@supports (animation-timeline: scroll()){
+  @media (prefers-reduced-motion:no-preference){
+    .progress{display:block;position:fixed;left:0;top:0;height:3px;width:100%;background:var(--ink);transform-origin:0 50%;transform:scaleX(0);z-index:60;animation:prog linear both;animation-timeline:scroll(root)}
+    @keyframes prog{to{transform:scaleX(1)}}
+  }
+}
+/* extra styles added for this version */
+.notice{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;justify-content:center;text-align:center;padding:10px 16px;background:var(--info-bg);border-bottom:1px solid var(--info-bd);font-size:15px}
+.notice b{font-weight:800}
+.hidden{display:none!important}
+.foot{margin-top:clamp(32px,5.5vw,64px);padding-bottom:8px;font-size:14px}
+.err{margin:20px auto;max-width:640px;padding:20px 24px;border-radius:20px;background:var(--bad-bg);border:1px solid var(--bad-bd)}
+</style>
+</head>
+<body>
+<!--
+  Running dashboard. One page, no build step, no frameworks.
+  Data comes from garmin_data.js (written by sync.py). If that file is missing, or the address ends
+  with ?demo, it uses sample_data.js (fake data) and shows a "Demo data" notice.
+-->
+<script>
+  // Is demo mode requested? (address ends with ?demo)
+  window.DEMO_REQUESTED = /[?&]demo(=|&|$)/.test(location.search);
+  // In demo mode the real data file is never even loaded.
+  if (!window.DEMO_REQUESTED) document.write('<script src="garmin_data.js"><\/script>');
+</script>
+<script src="sample_data.js"></script>
+
+<div style="min-height: 100vh; background: var(--bg); color: var(--ink); padding-bottom: 72px">
+  <div class="progress" aria-hidden="true"></div>
+  <div id="notice" class="notice hidden" role="status"></div>
+  <header class="wrap hdr" id="header"></header>
+
+  <!-- ================= SETUP SCREEN ================= -->
+  <main class="wrap hidden" id="setupView" style="padding-top: 20px; max-width: 760px"></main>
+
+  <!-- ================= DASHBOARD ================= -->
+  <main id="dashView" class="hidden">
+    <!-- First screen: readiness hero, race strip, four numbers -->
+    <div class="wrap reveal" data-reveal="hero">
+      <div id="hero"></div>
+      <div id="strip"></div>
+      <div id="metrics"></div>
+      <div id="metricDetail"></div>
+    </div>
+
+    <!-- Banners -->
+    <div class="wrap" id="banners" style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px"></div>
+
+    <!-- STAGE 2: weekly calendar goes here -->
+    <section class="wrap sect" id="weekSec" aria-labelledby="weekH"></section>
+
+    <!-- STAGE 3: chapters go here -->
+    <div id="chapters"></div>
+
+    <div class="wrap foot muted" id="foot"></div>
+  </main>
+  <div id="fatal" class="wrap"></div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================================
+   1. SMALL HELPERS
+   ========================================================================== */
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYN = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAYFULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const DIST = {'5K':5,'10K':10,'Half marathon':21.0975,'Marathon':42.195};       // race distances, km
+const LONGB = {'5K':10,'10K':13,'Half marathon':16,'Marathon':28,'General fitness':10}; // typical longest run, km
+const DEFAULT_GOAL = {'5K':[0,25,0],'10K':[0,52,0],'Half marathon':[1,50,0],'Marathon':[3,50,0]};
+// Weekly plan templates: which kind of session on Mon..Sun for 3 to 6 training days per week
+const TPL = {
+  3:['rest','easy','rest','easy','rest','rest','long'],
+  4:['rest','easy','rest','tempo','easy','rest','long'],
+  5:['easy','gym','tempo','rest','easy','rest','long'],
+  6:['easy','gym','tempo','easy','rest','easy','long']
+};
+const KIND_LABEL = {easy:'Easy run',tempo:'Tempo',long:'Long run',gym:'Gym',rest:'Rest'};
+const RING_C = 339.3;       // circumference of the readiness ring
+const LOAD_K = 150;         // load fallback: hours x intensity^2 x this (only when Garmin gives no load)
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function isNum(v){ return typeof v === 'number' && isFinite(v); }
+function pad(n){ return n < 10 ? '0' + n : '' + n; }
+// Day numbers: whole days since 1970 (UTC). Makes date maths easy and avoids time zone surprises.
+function dn(iso){ const p = iso.split('-').map(Number); return Math.round(Date.UTC(p[0], p[1]-1, p[2]) / 864e5); }
+function isoOf(n){ const d = new Date(n * 864e5); return d.getUTCFullYear() + '-' + pad(d.getUTCMonth()+1) + '-' + pad(d.getUTCDate()); }
+function wd(n){ return (n + 3) % 7; }                       // 0 = Monday ... 6 = Sunday
+function fmtDate(n){ const d = new Date(n*864e5); return DAYN[wd(n)] + ' ' + d.getUTCDate() + ' ' + MONTHS[d.getUTCMonth()]; }
+function fmtShort(n){ const d = new Date(n*864e5); return d.getUTCDate() + ' ' + MONTHS[d.getUTCMonth()]; }
+function mmss(sec){ sec = Math.round(sec); return Math.floor(sec/60) + ':' + pad(sec % 60); }
+function hms(sec){ sec = Math.round(sec); return Math.floor(sec/3600) + ':' + pad(Math.floor((sec%3600)/60)) + ':' + pad(sec % 60); }
+function fmtR(sec){ if (sec < 3600) return mmss(sec); const m = Math.round(sec/60); return Math.floor(m/60) + ':' + pad(m % 60); }
+function mean(a){ return a.reduce(function(x,y){ return x+y; }, 0) / a.length; }
+function sd(a){ const m = mean(a); return Math.sqrt(mean(a.map(function(x){ return (x-m)*(x-m); }))); }
+function median(a){ const b = a.slice().sort(function(x,y){ return x-y; }); const m = Math.floor(b.length/2); return b.length % 2 ? b[m] : (b[m-1]+b[m])/2; }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function fk(v){ return String(Math.round(v*10)/10); }
+function fmtHM(min){ min = Math.round(min); return Math.floor(min/60) + 'h ' + (min % 60) + 'm'; }
+function fmtClock(m){ m = Math.round(m); return pad(((Math.floor(m/60) % 24) + 24) % 24) + ':' + pad(((m % 60) + 60) % 60); }
+function signed(v,suf){ return (v >= 0 ? '+' : '−') + Math.abs(v) + suf; }
+function durTxt(sec){ sec = Math.round(Math.abs(sec)); return sec >= 60 ? Math.floor(sec/60) + ' min ' + (sec%60) + ' s' : sec + ' s'; }
+function ago(min){ if (min < 1) return 'just now'; if (min < 60) return Math.round(min) + ' min ago'; if (min < 1440) return Math.round(min/60) + ' h ago'; return Math.round(min/1440) + ' days ago'; }
+function phaseOf(raceN, n){ if (raceN == null) return 'fitness'; const d = raceN - n; if (d < 0) return 'done'; if (d <= 14) return 'taper'; if (d <= 35) return 'peak'; return 'build'; }
+function weeksAgo(T, n){ return Math.max(0, Math.round(((T - wd(T)) - (n - wd(n))) / 7)); }
+function isAttn(c){ return c === 'var(--warn)' || c === 'var(--bad)'; }
+// Saved choices live in the browser (localStorage). Wrapped in try/catch because some browsers block it.
+function store(key, val){ try { if (val === undefined) return JSON.parse(localStorage.getItem(key)); localStorage.setItem(key, JSON.stringify(val)); } catch (e) { return null; } }
+
+/* ============================================================================
+   2. CHOOSE THE DATA (real, sample, or demo) AND TURN IT INTO THE PAGE'S MODEL
+   ========================================================================== */
+const SRC = (function(){
+  if (window.DEMO_REQUESTED && window.SAMPLE_DATA) return { raw: window.SAMPLE_DATA, demo: true, why: 'demo' };
+  if (window.GARMIN_DATA) return { raw: window.GARMIN_DATA, demo: false, why: 'real' };
+  if (window.SAMPLE_DATA) return { raw: window.SAMPLE_DATA, demo: true, why: 'missing' };
+  return null;
+})();
+const KEY = SRC && SRC.demo ? 'rd.demo.' : 'rd.';       // demo mode keeps its own saved choices
+
+function bedMinutes(hhmm){                              // "23:10" -> 1390; after midnight "00:30" -> 1470
+  if (!hhmm) return null;
+  const p = hhmm.split(':').map(Number); let m = p[0]*60 + p[1];
+  if (m < 12*60) m += 1440;
+  return m;
+}
+
+// Today as a day number, from the computer's own clock (local date).
+function todayN(){ const d = new Date(); return dn(d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())); }
+
+function buildModel(raw){
+  const T = todayN();
+  const zones = raw.heartRateZones || null;
+  const days = raw.days.map(function(d){
+    const s = d.sleep;
+    return { n: dn(d.date), hrv: d.hrv, base: d.hrvBaseline, rhr: d.restingHR,
+      score: s ? s.score : null, total: s && s.totalSec != null ? Math.round(s.totalSec/60) : null,
+      deep: s && s.deepSec != null ? Math.round(s.deepSec/60) : null, rem: s && s.remSec != null ? Math.round(s.remSec/60) : null,
+      bed: s ? bedMinutes(s.bedtime) : null, bb: d.bodyBatteryWake, vo2: d.vo2Max };
+  });
+
+  // Heart rate reference points come from the person's own profile and zones, never fixed numbers.
+  const rhrVals = days.map(function(d){ return d.rhr; }).filter(isNum);
+  const maxSeen = Math.max.apply(null, raw.activities.map(function(a){ return a.maxHR || 0; }).concat([0]));
+  const hrRest = (zones && zones.restingHR) || (rhrVals.length ? median(rhrVals) : 55);
+  const hrMax = (zones && zones.maxHR) || maxSeen || 185;
+  const intensity = function(hr){ return clamp((hr - hrRest) / (hrMax - hrRest), 0, 1); };
+  const tempoFloor = zones && zones.zoneFloors && zones.zoneFloors[3] ? zones.zoneFloors[3] : hrRest + 0.8 * (hrMax - hrRest);
+
+  // Training load: Garmin's own number when there is one, otherwise hours x intensity^2 x constant.
+  const loadOf = function(a){
+    if (isNum(a.trainingLoad)) return a.trainingLoad;
+    if (!isNum(a.durationSec) || !isNum(a.avgHR)) return 0;
+    const i = intensity(a.avgHR);
+    return a.durationSec / 3600 * i * i * LOAD_K;
+  };
+
+  const runsRaw = raw.activities.filter(function(a){ return a.isRun && a.distanceM > 0 && a.durationSec > 0; });
+  const medKm = runsRaw.length ? median(runsRaw.map(function(a){ return a.distanceM / 1000; })) : 0;
+
+  const acts = raw.activities.map(function(a){
+    const n = dn(a.date);
+    if (a.isRun && a.distanceM > 0 && a.durationSec > 0) {
+      const km = a.distanceM / 1000, pace = a.durationSec / km;
+      // Kind of run, guessed from the data: hard heart rate = tempo; much longer than usual = long; else easy.
+      let kind = 'easy';
+      if (isNum(a.avgHR) && a.avgHR >= tempoFloor && km >= 3) kind = 'tempo';
+      else if (km >= 5 && km >= 1.4 * medKm) kind = 'long';
+      const h = halves(a.splits);
+      return { id: a.id, type: 'run', kind: kind, n: n, km: km, pace: pace, hr: a.avgHR, dur: a.durationSec, load: loadOf(a),
+        p1: h ? h.p1 : null, p2: h ? h.p2 : null, h1: h ? h.h1 : null, h2: h ? h.h2 : null, hasSplits: !!h };
+    }
+    if (a.type === 'strength_training') return { id: a.id, type: 'gym', kind: 'gym', n: n, dur: a.durationSec, hr: a.avgHR, load: loadOf(a) };
+    return { id: a.id, type: 'other', kind: 'other', n: n, dur: a.durationSec, hr: a.avgHR, load: loadOf(a) };
+  });
+
+  const syncMin = raw.lastSynced ? (Date.now() - Date.parse(raw.lastSynced)) / 60000 : null;
+  return { raw: raw, T: T, days: days, acts: acts, zones: zones, hrRest: hrRest, hrMax: hrMax, syncMin: syncMin,
+    cycleEnabled: !!(raw.cycle && raw.cycle.enabled) };
+}
+
+// First half vs second half of a run (by distance), from the per-km splits. Returns null without splits.
+function halves(splits){
+  if (!splits || splits.length < 2) return null;
+  const total = splits.reduce(function(s, x){ return s + x.distM; }, 0);
+  if (total < 2000) return null;
+  const half = total / 2;
+  let dist = 0, t1 = 0, t2 = 0, hSum1 = 0, hW1 = 0, hSum2 = 0, hW2 = 0;
+  splits.forEach(function(x){
+    // part of this split that falls in the first half
+    const inFirst = clamp(half - dist, 0, x.distM), inSecond = x.distM - inFirst;
+    t1 += x.durSec * inFirst / x.distM; t2 += x.durSec * inSecond / x.distM;
+    if (isNum(x.avgHR)) { hSum1 += x.avgHR * inFirst; hW1 += inFirst; hSum2 += x.avgHR * inSecond; hW2 += inSecond; }
+    dist += x.distM;
+  });
+  if (!hW1 || !hW2) return null;
+  return { p1: t1 / (half / 1000), p2: t2 / (half / 1000), h1: hSum1 / hW1, h2: hSum2 / hW2 };
+}
+
+/* ============================================================================
+   3. READINESS (compared with the person's own history)
+   ========================================================================== */
+// Colour codes: g = green, y = yellow, r = red.
+function readinessAt(days, i){
+  const d = days[i];
+  const prev = days.slice(Math.max(0, i - 28), i);
+  const hv = prev.map(function(x){ return x.hrv; }).filter(isNum);
+  if (hv.length < 14) {
+    return { learning: true, d: d, have: days.slice(0, i + 1).filter(function(x){ return isNum(x.hrv); }).length };
+  }
+  const hm = mean(hv), hs = Math.max(3, sd(hv));
+  const rv = prev.map(function(x){ return x.rhr; }).filter(isNum);
+  const rm = rv.length ? mean(rv) : null;
+  let z = null, hrvS = null, hrvPct = null;
+  if (isNum(d.hrv)) {
+    z = (d.hrv - hm) / hs;
+    hrvPct = (d.hrv / hm - 1) * 100;
+    if (d.base && isNum(d.base.low) && isNum(d.base.high)) {
+      // Prefer Garmin's own "balanced" range. Starting point, to be tuned: below the range by up to half its width = yellow.
+      const w = d.base.high - d.base.low;
+      hrvS = d.hrv >= d.base.low ? 'g' : d.hrv >= d.base.low - 0.5 * w ? 'y' : 'r';
+    } else {
+      hrvS = z >= -0.6 ? 'g' : z >= -1.5 ? 'y' : 'r';
+    }
+  }
+  const rdiff = isNum(d.rhr) && rm != null ? d.rhr - rm : null;
+  const rhrS = rdiff == null ? null : rdiff <= 2 ? 'g' : rdiff < 4.5 ? 'y' : 'r';
+  const slS = isNum(d.score) ? (d.score >= 70 ? 'g' : d.score >= 58 ? 'y' : 'r') : null;
+  const bbS = isNum(d.bb) ? (d.bb >= 55 ? 'g' : d.bb >= 32 ? 'y' : 'r') : null;
+  const list = [hrvS, rhrS, slS, bbS].filter(Boolean);
+  const reds = list.filter(function(x){ return x === 'r'; }).length;
+  const ys = list.filter(function(x){ return x === 'y'; }).length;
+  const overall = (hrvS === 'r' || reds >= 2) ? 'r' : (reds === 1 || ys >= 2) ? 'y' : 'g';
+  return { learning: false, d: d, hm: hm, hs: hs, rm: rm, z: z, hrvPct: hrvPct, rdiff: rdiff, hrvS: hrvS, rhrS: rhrS, slS: slS, bbS: bbS, overall: overall };
+}
+
+/* ============================================================================
+   4. PLAN, LOAD, AND EVERYTHING THE SCREENS NEED  (recomputed when setup changes)
+   ========================================================================== */
+function plannedKm(kind, race, phase, wk){
+  if (kind === 'rest' || kind === 'gym') return 0;
+  const f = (phase === 'peak' ? 1.1 : phase === 'taper' ? 0.6 : 1) * (1 - 0.015 * wk) * ((wk % 4 === 3) ? 0.8 : 1);
+  const L = Math.round((LONGB[race] || 10) * f * 2) / 2;
+  if (kind === 'long') return L;
+  if (kind === 'tempo') return Math.max(3, Math.round(L * 0.5));
+  return Math.max(3, Math.round(L * 0.375));
+}
+
+function defaultSetup(){
+  const T = todayN();
+  if (SRC && SRC.demo) return { race: 'Half marathon', date: isoOf(T + 28), h: 1, m: 50, s: 0, perWeek: 5, cycle: true };
+  const g = DEFAULT_GOAL['Half marathon'];
+  return { race: 'Half marathon', date: isoOf(T + 84), h: g[0], m: g[1], s: g[2], perWeek: 4, cycle: false };
+}
+
+function compute(M, setup){
+  const T = M.T, days = M.days;
+  const raceN0 = (setup.race !== 'General fitness' && setup.date) ? dn(setup.date) : null;
+  // A race date in the past counts as "no race" so the page does not show a stale countdown.
+  const raceN = (raceN0 != null && raceN0 >= T) ? raceN0 : null;
+  const isFit = raceN == null;
+  const distKm = DIST[setup.race] || null;
+  const goalSec = (+setup.h || 0) * 3600 + (+setup.m || 0) * 60 + (+setup.s || 0);
+  const G = (raceN != null && goalSec > 0 && distKm) ? goalSec / distKm : null;   // goal pace, seconds per km
+  const phase = phaseOf(raceN, T);
+  const daysLeft = raceN != null ? raceN - T : null;
+  const perWeek = setup.perWeek;
+
+  // "Today" in the data = latest day that has an HRV reading (the watch may not have synced today's yet)
+  let ti = days.length - 1;
+  while (ti > 0 && !isNum(days[ti].hrv)) ti--;
+  const rd = readinessAt(days, ti);
+  const d0 = days[ti];
+
+  // ---- the week ----
+  const mon = T - wd(T);
+  const actsByN = {};
+  M.acts.forEach(function(a){ (actsByN[a.n] = actsByN[a.n] || []).push(a); });
+  const week = []; let plannedTotal = 0, actualTotal = 0;
+  for (let i = 0; i < 7; i++) {
+    const n = mon + i, kind = TPL[perWeek][i];
+    const pk = plannedKm(kind, setup.race, phaseOf(raceN, n), 0);
+    const list = actsByN[n] || [];
+    const runs = list.filter(function(a){ return a.type === 'run'; });
+    const gym = list.filter(function(a){ return a.type === 'gym'; });
+    const runKm = runs.reduce(function(x, a){ return x + a.km; }, 0);
+    const done = kind === 'gym' ? gym.length > 0 : (kind !== 'rest' && runs.length > 0);
+    const extra = kind === 'rest' && (runs.length > 0 || gym.length > 0);
+    const missed = n < T && kind !== 'rest' && !done;
+    plannedTotal += pk; actualTotal += runKm;
+    week.push({ kind: kind, i: i, n: n, dow: DAYN[i], date: new Date(n * 864e5).getUTCDate(), isToday: n === T, label: KIND_LABEL[kind], pk: pk,
+      km: kind === 'gym' ? (done ? Math.round(gym[0].dur / 60) + ' min' : '45 min') : kind === 'rest' ? 'Rest' : (done && runKm > 0 ? fk(runKm) : pk) + ' km',
+      isDone: done, isMissed: missed, isExtra: extra });
+  }
+  const cal = { actual: fk(actualTotal), planned: plannedTotal };
+  const todayW = week[wd(T)], todayKind = todayW.kind;
+  const sLabel = todayKind === 'rest' ? 'rest day' : KIND_LABEL[todayKind].toLowerCase();
+
+  // ---- today's pace guidance: from the goal pace, or from the person's own recent runs of that kind ----
+  let guide = null;
+  if (todayKind === 'easy' || todayKind === 'tempo' || todayKind === 'long') {
+    if (G) { const rg = paceRange(todayKind, G); guide = mmss(rg[0]) + ' to ' + mmss(rg[1]); }
+    else {
+      const pr = M.acts.filter(function(x){ return x.type === 'run' && x.kind === todayKind && x.n >= T - 42; });
+      if (pr.length >= 2) { const m = median(pr.map(function(x){ return x.pace; })); guide = mmss(m * 0.97) + ' to ' + mmss(m * 1.03); }
+    }
+  }
+  const today = { label: todayKind === 'rest' ? 'Rest day' : KIND_LABEL[todayKind],
+    km: todayKind === 'rest' ? '' : todayKind === 'gym' ? '45 min' : todayW.pk + ' km',
+    sub: todayW.isDone ? 'Done today' : todayKind === 'rest' ? 'Nothing planned. Walk, stretch, sleep.' : todayKind === 'gym' ? 'Strength session' : (guide ? 'Aim for ' + guide + ' per km' : 'Run by feel') };
+
+  // ---- training load series: acute (7 days) / chronic (average week of the last 28) ----
+  const loadByN = {};
+  M.acts.forEach(function(a){ loadByN[a.n] = (loadByN[a.n] || 0) + (a.load || 0); });
+  const sumLoad = function(a, b){ let t = 0; for (let k = a; k <= b; k++) t += loadByN[k] || 0; return t; };
+  // How many days of activity history there is (load needs about 4 weeks to mean anything)
+  const firstN = M.acts.length ? Math.min.apply(null, M.acts.map(function(a){ return a.n; })) : T;
+  const nDays = M.acts.length ? T - firstN + 1 : 0;
+  const hasLoad = nDays >= 28;
+  const series = [];
+  if (hasLoad) for (let n = Math.max(firstN + 27, T - 55); n <= T; n++) {
+    const a = sumLoad(n - 6, n), c = sumLoad(n - 27, n) / 4;
+    series.push({ n: n, v: c > 0 ? a / c : 0, a: a, c: c });
+  }
+  const lastS = series.length ? series[series.length - 1] : null;
+
+  return { setup: setup, raceN: raceN, isFit: isFit, distKm: distKm, goalSec: goalSec, G: G, phase: phase, daysLeft: daysLeft, perWeek: perWeek,
+    ti: ti, rd: rd, d0: d0, mon: mon, week: week, cal: cal, todayKind: todayKind, sLabel: sLabel, today: today,
+    loadByN: loadByN, sumLoad: sumLoad, series: series, lastS: lastS, hasLoad: hasLoad, nDays: nDays, firstN: firstN };
+}
+
+// Target pace range (seconds per km) for a kind of run, given goal pace G.
+function paceRange(kind, G){ return kind === 'easy' ? [G + 55, G + 90] : kind === 'tempo' ? [G - 8, G + 8] : [G + 45, G + 85]; }
+
+/* ============================================================================
+   5. PAGE STATE
+   ========================================================================== */
+let MODEL = null, C = null;                       // data model, computed values
+const S = { view: 'dash', openRun: null, moreRun: null, hov: null, metric: null, more: {}, manualDate: '', msg: '', setup: null, cycleManual: null };
+
+function recompute(){ C = compute(MODEL, S.setup); C.cyc = cycleModel(); C.cycleSoon = C.cyc.soon; }
+
+/* ============================================================================
+   6. SCREENS
+   ========================================================================== */
+/* ---------- header and notice ---------- */
+function renderHeader(){
+  const T = MODEL.T, d = new Date(T * 864e5);
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const stale = MODEL.syncMin != null && MODEL.syncMin > 720;
+  const syncTxt = MODEL.syncMin == null ? 'Not synced yet' : 'Synced ' + ago(MODEL.syncMin);
+  $('header').innerHTML =
+    '<div style="min-width: 0"><div class="muted" style="font-size: 14px">' + DAYFULL[wd(T)] + ' ' + d.getUTCDate() + ' ' + MONTHS_FULL[d.getUTCMonth()] + '</div>' +
+    '<div style="font-size: 19px; font-weight: 700">' + greet + '</div></div>' +
+    '<div style="display: flex; align-items: center; gap: 14px">' +
+    '<div role="status" class="sync"><span class="dot" style="background: ' + (stale ? 'var(--warn)' : 'var(--muted)') + '"></span><span>' + syncTxt + '</span>' +
+    (stale && !SRC.demo ? '<span class="muted">· run your sync script</span>' : '') + '</div>' +
+    '<button class="icon-btn" aria-label="Setup" data-act="openSetup"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" style="fill:none;stroke:currentColor;stroke-width:2"></circle><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round"></path></svg></button></div>';
+}
+
+function renderNotice(){
+  const el = $('notice');
+  if (!SRC.demo) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  el.innerHTML = SRC.why === 'demo'
+    ? '<b>Demo data.</b> <span>This is a made-up runner, not real health data.</span>'
+    : '<b>Demo data.</b> <span>garmin_data.js was not found, so you are seeing a made-up runner. Run <code>python3 sync.py</code> to see your own data.</span>';
+  document.title = 'Running Dashboard (demo)';
+}
+
+/* ---------- setup screen ---------- */
+function renderSetup(){
+  const s = S.setup, isFit = s.race === 'General fitness';
+  const goalSec = (+s.h || 0) * 3600 + (+s.m || 0) * 60 + (+s.s || 0);
+  const dist = DIST[s.race] || null;
+  const G = (!isFit && goalSec > 0 && dist) ? goalSec / dist : null;
+  const opt = function(v, label){ return '<option value="' + v + '"' + (s.race === v ? ' selected' : '') + '>' + label + '</option>'; };
+  const ranges = G ? [['Easy runs', paceRange('easy', G)], ['Tempo', paceRange('tempo', G)], ['Long runs', paceRange('long', G)]] : [];
+  $('setupView').innerHTML =
+    '<h2 style="font-size: clamp(30px,4.6vw,40px); font-weight: 800; letter-spacing: -0.03em">' + (S.firstRun ? 'Welcome. Set up your training' : 'Set up your training') + '</h2>' +
+    '<p class="muted" style="margin-top: 8px; max-width: 48ch">Your goal pace and weekly plan are worked out from these choices. Your watch data comes from a local file, so there is nothing to log in to. Choices are saved in this browser only.</p>' +
+    '<div style="display: flex; flex-direction: column; gap: 26px; margin-top: 28px">' +
+    '<div style="display: flex; flex-direction: column; gap: 8px"><label for="race" style="font-weight: 700">Race distance</label>' +
+    '<select id="race" class="field" data-set="race">' + opt('5K','5K') + opt('10K','10K') + opt('Half marathon','Half marathon') + opt('Marathon','Marathon') + opt('General fitness','General fitness (no race)') + '</select></div>' +
+    (isFit ? '<p style="padding: 20px 24px; border-radius: 20px; background: var(--surface); color: var(--ink2)">No race, no pressure. The countdown and race predictor stay hidden and your pace guide builds from your own recent runs.</p>' :
+    '<div style="display: flex; flex-wrap: wrap; gap: 22px">' +
+      '<div style="display: flex; flex-direction: column; gap: 8px; flex: 1 1 200px"><label for="rdate" style="font-weight: 700">Race date</label>' +
+      '<input id="rdate" class="field" type="date" value="' + esc(s.date) + '" min="' + isoOf(MODEL.T) + '" data-set="date"></div>' +
+      '<div style="display: flex; flex-direction: column; gap: 8px; flex: 1 1 280px"><span id="goalLbl" style="font-weight: 700">Goal finish time</span>' +
+      '<div role="group" aria-labelledby="goalLbl" style="display: flex; align-items: center; gap: 8px">' +
+      '<input class="field" type="number" min="0" max="9" value="' + s.h + '" data-set="h" aria-label="Hours" style="text-align: center"><span class="muted">h</span>' +
+      '<input class="field" type="number" min="0" max="59" value="' + s.m + '" data-set="m" aria-label="Minutes" style="text-align: center"><span class="muted">m</span>' +
+      '<input class="field" type="number" min="0" max="59" value="' + s.s + '" data-set="s" aria-label="Seconds" style="text-align: center"><span class="muted">s</span></div></div></div>' +
+    '<div style="padding: 20px 24px; border-radius: 20px; background: var(--surface)"><div class="muted">Your goal pace</div>' +
+      '<div style="display: flex; align-items: baseline; gap: 8px"><span class="bigv">' + (G ? mmss(G) : '–') + '</span><span style="font-size: 18px; font-weight: 600">per km</span></div>' +
+      '<p class="muted" style="margin-top: 8px">' + (G ? 'Your ' + hms(goalSec) + ' goal over ' + (s.race === 'Half marathon' ? '21.1' : String(dist)) + ' km works out to this pace.' : 'Enter a goal time to see your pace.') + '</p>' +
+      '<div style="display: flex; flex-direction: column; gap: 6px; margin-top: 14px">' +
+      ranges.map(function(r){ return '<div style="display: flex; justify-content: space-between; gap: 10px"><span style="font-weight: 600">' + r[0] + '</span><span class="muted">' + mmss(r[1][0]) + ' to ' + mmss(r[1][1]) + '</span></div>'; }).join('') +
+      '</div></div>') +
+    '<div style="display: flex; flex-direction: column; gap: 10px"><span id="dpwLbl" style="font-weight: 700">Training days per week</span>' +
+      '<div role="group" aria-labelledby="dpwLbl" style="display: flex; align-items: center; gap: 16px">' +
+      '<button class="btn" data-act="perMinus" aria-label="One fewer training day" style="width: 52px; padding: 0; font-size: 24px">−</button>' +
+      '<span style="font-size: 32px; font-weight: 800; min-width: 28px; text-align: center">' + s.perWeek + '</span>' +
+      '<button class="btn" data-act="perPlus" aria-label="One more training day" style="width: 52px; padding: 0; font-size: 24px">+</button></div></div>' +
+    '<div style="display: flex; align-items: flex-start; gap: 16px"><input id="cyc" type="checkbox" data-set="cycle"' + (s.cycle ? ' checked' : '') + ' style="width: 26px; height: 26px; margin-top: 2px; accent-color: var(--accent)">' +
+      '<label for="cyc" style="flex: 1; cursor: pointer"><div style="font-weight: 700">Cycle tracking</div>' +
+      '<div class="muted" style="font-size: 15px">Adds a gentle cycle section and a heads up before your period. Uses a date you enter here' + (MODEL.cycleEnabled ? ' (Garmin cycle data is not used yet)' : '') + '.</div></label></div>' +
+    '<div><button class="btn btn-primary" data-act="closeSetup" style="padding: 0 32px">Save and view dashboard</button></div></div>';
+}
+
+/* ---------- hero: verdict, ring, today ---------- */
+function sparkPts(vals, higherBetter){
+  const mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals), span = (mx - mn) || 1;
+  const pts = vals.map(function(v, i){ const t = (v - mn) / span; return { x: vals.length > 1 ? i / (vals.length - 1) * 100 : 50, y: higherBetter ? (1 - t) * 76 + 12 : t * 76 + 12 }; });
+  const last = pts[pts.length - 1];
+  return { pts: pts.map(function(p){ return p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' '), dx: last.x, dy: last.y };
+}
+
+function heroModel(){
+  const rd = C.rd, d0 = C.d0, tk = C.todayKind, sl = C.sLabel;
+  const sk = rd.learning ? 'l' : rd.overall;
+  const meta = { g: { headline: 'Good to go', bg: 'var(--surface)', bd: 'var(--line)', ring: 'var(--ink)' },
+    y: { headline: 'Take it easy', bg: 'var(--warn-bg)', bd: 'var(--warn-bd)', ring: 'var(--warn)' },
+    r: { headline: 'Time to recover', bg: 'var(--bad-bg)', bd: 'var(--bad-bd)', ring: 'var(--bad)' },
+    l: { headline: 'Still learning your normal', bg: 'var(--surface)', bd: 'var(--line)', ring: 'var(--muted)' } }[sk];
+  const sug = {
+    g: tk === 'rest' ? 'You are recovered. Enjoy your rest day.' : 'You are well recovered. Go ahead with today’s ' + sl + ' as planned.',
+    y: tk === 'rest' ? 'A little under your usual. A walk or light stretching suits today.' : 'A little under your usual. Keep today’s ' + sl + ' relaxed and cut it short if it feels heavy.',
+    r: tk === 'rest' ? 'Your body wants more recovery. Keep today fully easy and aim for an early night.' : 'Your body needs a break. Swap today’s ' + sl + ' for rest or a 20 minute walk.',
+    l: 'Run by feel for now. Your readiness colors switch on after about 14 days of watch data.' }[sk];
+  let score = 0;
+  if (!rd.learning) {
+    const parts = [];
+    if (rd.z != null) parts.push(clamp(Math.round(72 + rd.z * 16), 5, 100));
+    if (rd.rdiff != null) parts.push(clamp(Math.round(85 - rd.rdiff * 9), 5, 100));
+    if (isNum(d0.score)) parts.push(d0.score);
+    if (isNum(d0.bb)) parts.push(d0.bb);
+    score = parts.length ? Math.round(mean(parts)) : 0;
+  }
+  return { meta: meta, sug: sug, score: score, hasScore: !rd.learning };
+}
+
+function renderHero(){
+  const h = heroModel(), m = h.meta, t = C.today;
+  $('hero').innerHTML =
+    '<section class="hero" aria-label="Today\'s readiness" style="background: ' + m.bg + '; border-color: ' + m.bd + '">' +
+    '<div style="min-width: 0"><h1 class="verdict">' + m.headline + '</h1><p class="line">' + h.sug + '</p>' +
+    '<div class="today"><div class="muted" style="font-size: 14px">Today</div>' +
+    '<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap"><span style="font-size: clamp(22px,3vw,28px); font-weight: 700; letter-spacing: -0.02em">' + t.label + '</span>' +
+    '<span style="font-size: clamp(22px,3vw,28px); font-weight: 300">' + t.km + '</span></div>' +
+    '<div class="muted" style="font-size: 15px">' + t.sub + '</div></div></div>' +
+    '<div class="ringbox" role="img" aria-label="' + (h.hasScore ? 'Readiness ' + h.score + ' out of 100' : 'Readiness is still being learned') + '">' +
+    '<svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" style="fill:none;stroke:var(--line);stroke-width:6"></circle>' +
+    '<circle class="ring" cx="60" cy="60" r="54" transform="rotate(-90 60 60)" style="fill:none;stroke:' + m.ring + ';stroke-width:6;stroke-linecap:round;stroke-dasharray:339.3;--off:' + (h.hasScore ? RING_C * (1 - h.score / 100) : RING_C) + '"></circle></svg>' +
+    '<div class="ringnum">' + (h.hasScore ? '<span class="big count" style="--to: ' + h.score + '"></span>' : '<span class="big muted">–</span>') +
+    '<span class="muted" style="font-size: 13px">Readiness</span></div></div></section>';
+}
+
+/* ---------- race countdown strip ---------- */
+function renderStrip(){
+  if (C.raceN == null) { $('strip').innerHTML = ''; return; }
+  const TOT = 112, dl = C.daysLeft;
+  const PH = { build: 'Build', peak: 'Peak', taper: 'Taper', done: 'Finished', fitness: 'Steady' };
+  $('strip').innerHTML = '<div class="strip"><div><span class="count" style="--to: ' + Math.max(0, dl) + '; font-weight: 800"></span> <span>' + (dl === 1 ? 'day' : 'days') + ' to your ' + esc(C.setup.race) + '</span> <span class="muted">· ' + fmtDate(C.raceN) + '</span></div>' +
+    '<div class="muted">' + PH[C.phase] + ' phase</div><div class="track" aria-hidden="true"><div style="width: ' + (1 - clamp(dl, 0, TOT) / TOT) * 100 + '%"></div></div></div>';
+}
+
+/* ---------- the quiet row of four numbers ---------- */
+function metricTiles(){
+  const rd = C.rd, d0 = C.d0, learn = rd.learning;
+  const upto = MODEL.days.slice(0, C.ti + 1).slice(-7);
+  const dotFor = function(k){ return k === 'y' ? 'var(--warn)' : 'var(--bad)'; };
+  const slK = isNum(d0.score) ? (d0.score >= 70 ? 'g' : d0.score >= 58 ? 'y' : 'r') : 'g';
+  const bbK = isNum(d0.bb) ? (d0.bb >= 55 ? 'g' : d0.bb >= 32 ? 'y' : 'r') : 'g';
+  const mk = function(key, field, label, value, unit, k, context, status){
+    const vals = upto.map(function(x){ return x[field]; }).filter(isNum);
+    const sp = vals.length >= 2 ? sparkPts(vals, true) : null;
+    const attn = !learn && value != null && k !== 'g';
+    return { key: key, label: label, value: value, unit: unit, attn: attn, dot: dotFor(k), sdot: attn ? dotFor(k) : 'var(--ink)', sp: sp, text: context + '. ' + status + '.' };
+  };
+  const hrvK = learn || rd.hrvS == null ? 'g' : rd.hrvS, rhrK = learn || rd.rhrS == null ? 'g' : rd.rhrS;
+  return [
+    mk('hrv', 'hrv', 'HRV', isNum(d0.hrv) ? d0.hrv : null, 'ms', hrvK,
+      learn ? 'Your normal builds over 14 days' : rd.hrvPct == null ? 'No reading yet' : signed(Math.round(rd.hrvPct), '%') + ' vs your normal of ' + Math.round(rd.hm) + ' ms',
+      learn ? 'Still learning' : rd.hrvS == null ? 'No data' : { g: rd.z > 0.6 ? 'Above your normal' : 'In your normal range', y: 'Slightly low', r: 'Well below normal' }[rd.hrvS]),
+    mk('rhr', 'rhr', 'Resting HR', isNum(d0.rhr) ? d0.rhr : null, 'bpm', rhrK,
+      learn ? 'Your normal builds over 14 days' : rd.rdiff == null ? 'No reading yet' : 'Your normal is ' + Math.round(rd.rm) + ' bpm (' + signed(Math.round(rd.rdiff), '') + ' today)',
+      learn ? 'Still learning' : rd.rhrS == null ? 'No data' : { g: 'Normal', y: 'A little high', r: 'High' }[rd.rhrS]),
+    mk('sleep', 'score', 'Sleep score', isNum(d0.score) ? d0.score : null, '', slK,
+      isNum(d0.total) ? fmtHM(d0.total) + ' asleep' : 'No sleep recorded', isNum(d0.score) ? { g: 'Restful', y: 'Fair', r: 'Poor' }[slK] : 'No data'),
+    mk('bb', 'bb', 'Body battery', isNum(d0.bb) ? d0.bb : null, '', bbK,
+      'Charged overnight', isNum(d0.bb) ? { g: 'Well charged', y: 'Moderate', r: 'Low' }[bbK] : 'No data')
+  ];
+}
+
+function renderMetrics(){
+  const tiles = metricTiles();
+  C.tiles = tiles;
+  $('metrics').innerHTML = '<div class="metrics" role="group" aria-label="Readiness numbers with 7 day trend. Tap one for details.">' +
+    tiles.map(function(t){
+      return '<button class="metric" data-act="metric" data-key="' + t.key + '" aria-expanded="' + (S.metric === t.key) + '">' +
+        '<span class="mval">' + (t.value != null ? '<span class="count" style="--to: ' + t.value + '"></span>' : '–') + '<small>' + t.unit + '</small></span>' +
+        '<span class="mlab">' + t.label + (t.attn ? '<span class="dot" style="background: ' + t.dot + '"></span>' : '') + '</span>' +
+        (t.sp ? '<span class="spk draw" aria-hidden="true"><svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible"><polyline points="' + t.sp.pts + '" style="fill:none;stroke:var(--ink2);stroke-width:1.75;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke"></polyline></svg>' +
+        '<span style="position: absolute; left: ' + t.sp.dx + '%; top: ' + t.sp.dy + '%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: ' + t.sdot + '"></span></span>' : '') +
+        '</button>';
+    }).join('') + '</div>';
+  renderMetricDetail();
+}
+
+function renderMetricDetail(){
+  const t = C.tiles.filter(function(x){ return x.key === S.metric; })[0];
+  $('metricDetail').innerHTML = t ? '<div class="mdetail expand"><div style="font-weight: 700; font-size: 17px">' + t.label + ' over the last 7 days</div><p style="color: var(--ink2); margin-top: 2px">' + t.text + '</p></div>' : '';
+  const btns = document.querySelectorAll('.metric');
+  for (let i = 0; i < btns.length; i++) btns[i].setAttribute('aria-expanded', String(btns[i].getAttribute('data-key') === S.metric));
+}
+
+/* ---------- warning banners ---------- */
+function renderBanners(){
+  const rd = C.rd, list = [];
+  const staleDays = C.rd.d ? MODEL.T - C.rd.d.n : 0;
+  if (!rd.learning) {
+    let streak = 0;
+    for (let i = C.ti; i >= 0 && streak < 10; i--) { const q = readinessAt(MODEL.days, i); if (q.learning || q.hrvS == null || q.hrvS === 'g') break; streak++; }
+    if (rd.hrvS === 'r' || streak >= 3) list.push({ bg: 'var(--warn-bg)', bd: 'var(--warn-bd)', dot: 'var(--warn)', glyph: '!', title: 'HRV is below your normal', text: (streak >= 2 ? 'It has been low for ' + streak + ' days. ' : '') + 'Keep today easy and see how you feel tomorrow.' });
+    if (C.lastS && C.lastS.v > 1.3) list.push({ bg: 'var(--warn-bg)', bd: 'var(--warn-bd)', dot: 'var(--warn)', glyph: '!', title: 'Training load is above your safe zone', text: 'Make the next easy day truly easy.' });
+    if (C.setup.cycle && C.cycleSoon != null && C.cycleSoon.days <= 5) list.push({ bg: 'var(--care-bg)', bd: 'var(--care-bd)', dot: 'var(--period)', glyph: '○', title: 'Your period may start soon', text: 'Around ' + fmtShort(C.cycleSoon.n) + '. Energy can dip a little, so go by feel and be kind to yourself.' });
+    if (C.phase === 'taper' && C.daysLeft >= 0) list.push({ bg: 'var(--info-bg)', bd: 'var(--info-bd)', dot: '#7FB0E6', glyph: 'i', title: 'Taper time, ' + C.daysLeft + (C.daysLeft === 1 ? ' day' : ' days') + ' to go', text: 'Less volume on purpose. Keep a few short sharp efforts and resist extra km.' });
+  } else {
+    list.push({ bg: 'var(--surface2)', bd: 'var(--line)', dot: 'var(--bar)', glyph: 'i', title: 'Still learning your normal', text: 'Warnings switch on after about 14 days of watch data. You have ' + rd.have + ' so far.' });
+  }
+  if (staleDays >= 2) list.push({ bg: 'var(--surface2)', bd: 'var(--line)', dot: 'var(--bar)', glyph: 'i', title: 'Latest watch data is from ' + fmtDate(C.rd.d.n), text: 'Sync your watch with the Garmin Connect app, then run sync.py again.' });
+  $('banners').innerHTML = list.map(function(b){
+    return '<div role="note" class="banner" style="background: ' + b.bg + '; border: 1px solid ' + b.bd + '"><span aria-hidden="true" style="flex: none; width: 24px; height: 24px; border-radius: 50%; background: ' + b.dot + '; display: grid; place-items: center; font-weight: 800; font-size: 13px; color: #10231F">' + b.glyph + '</span>' +
+      '<div style="min-width: 0"><span style="font-weight: 700">' + b.title + '.</span> <span style="color: var(--ink2)">' + b.text + '</span></div></div>';
+  }).join('');
+}
+
+/* ---------- STAGE 2 and 3 hooks (filled in later) ---------- */
+/* ---------- STAGE 2: the weekly calendar ---------- */
+function renderWeek(){
+  const w = C.week, cal = C.cal;
+  const tick = '<svg width="24" height="24" viewBox="0 0 24 24" role="img" aria-label="Done"><circle cx="12" cy="12" r="11" style="fill:var(--ink)"></circle><path d="M7 12.5l3.2 3.2L17 9" style="fill:none;stroke:var(--surface);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round"></path></svg>';
+  $('weekSec').innerHTML =
+    '<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 20px">' +
+    '<h2 class="h2" id="weekH">This week</h2>' +
+    '<div class="muted"><span style="color: var(--ink); font-weight: 700">' + cal.actual + '</span> of ' + cal.planned + ' km</div></div>' +
+    '<div class="week reveal" data-reveal="cal">' +
+    w.map(function(d){
+      return '<div class="day stag' + (d.isToday ? ' today' : '') + '" style="--i: ' + d.i + '"' + (d.isToday ? ' aria-current="date"' : '') + '>' +
+        '<div class="dname">' + d.dow + '<span>' + d.date + '</span></div>' +
+        '<div class="dtype">' + d.label + '</div>' +
+        '<div class="dkm">' + d.km + '</div>' +
+        '<div class="dstate">' + (d.isDone ? tick : d.isMissed ? '<span class="muted" style="font-size: 14px">Skipped</span>' : d.isExtra ? '<span class="muted" style="font-size: 14px">Extra run</span>' : '') + '</div></div>';
+    }).join('') + '</div>';
+}
+/* ---------- STAGE 3: the four chapters ---------- */
+const PLURAL = { easy: 'easy runs', tempo: 'tempo runs', long: 'long runs' };
+// A tempo run is not an all-out race, so predictions from it get this small allowance (to be tuned on real data).
+const EFFORT_FACTOR = 0.965;
+
+function isMore(k){ return !!S.more[k]; }
+function moreBtn(k, closedLabel){ return '<button class="more" data-act="more" data-k="' + k + '" aria-expanded="' + isMore(k) + '">' + (isMore(k) ? 'See less' : closedLabel || 'See more') + '</button>'; }
+function polyline(pts, w){ return '<polyline points="' + pts + '" style="fill:none;stroke:var(--ink2);stroke-width:' + w + ';stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke"></polyline>'; }
+function dotAt(dx, dy, size, border){ return '<div style="position: absolute; left: ' + dx + '%; top: ' + dy + '%; width: ' + size + 'px; height: ' + size + 'px; margin: -' + size/2 + 'px 0 0 -' + size/2 + 'px; border-radius: 50%; background: var(--ink)' + (border ? '; border: ' + border + 'px solid var(--surface)' : '') + '"></div>'; }
+
+function ensureChapters(){
+  if ($('c1body')) return;
+  $('chapters').innerHTML = ['c1','c2','c3','c4'].map(function(k){
+    return '<section class="chap reveal" data-reveal="' + k + '" style="--tone: var(--' + k + ')" aria-labelledby="' + k + 'h"><div class="wrap" id="' + k + 'body"></div></section>';
+  }).join('');
+}
+function renderChapters(){ ensureChapters(); renderTrain(); renderProg(); renderRuns(); renderSleep(); }
+
+/* ----- chapter 1: training load ----- */
+function renderTrain(){
+  const T = MODEL.T, lastS = C.lastS, ser = C.series, mon = C.mon, phase = C.phase;
+  const zk = lastS ? (lastS.v < 0.8 ? 'low' : lastS.v <= 1.3 ? 'ok' : lastS.v <= 1.5 ? 'high' : 'vhigh') : 'none';
+  const head = { none: ['Still learning your normal', 'Training load needs about 4 weeks of activities. You have ' + C.nDays + (C.nDays === 1 ? ' day' : ' days') + ' so far.'],
+    low: [phase === 'taper' ? 'Your load is easing off for race day' : 'Your load is lighter than usual', null],
+    ok: ['Your training load is balanced', null], high: ['Your load is climbing fast', null], vhigh: ['Your load is well above your usual', null] }[zk];
+  let sub = head[1];
+  if (sub == null) sub = 'Your last 7 days are ' + lastS.v.toFixed(2) + ' times your 4 week average.' + (zk === 'ok' ? ' That sits inside the safe zone.' : zk === 'low' && phase === 'taper' ? ' That is expected during a taper.' : zk === 'low' ? ' Fine for recovery, but check it is on purpose.' : ' Keep the next easy day truly easy.');
+  const ready = C.hasLoad && !!lastS;
+  let right = '';
+  if (ready) {
+    const lo = 0.4, hi = 1.8, yOf = function(v){ return (1 - (clamp(v, lo, hi) - lo) / (hi - lo)) * 100; };
+    C.ld = { yOf: yOf };
+    const bandY = yOf(1.3), bandB = yOf(0.8);
+    const pts = ser.map(function(p, i){ return (ser.length > 1 ? i / (ser.length - 1) * 100 : 0).toFixed(1) + ',' + yOf(p.v).toFixed(1); }).join(' ');
+    right = '<div class="panel"><div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap"><span class="bigv sm">' + lastS.v.toFixed(2) + '</span><span class="muted">acute to chronic ratio</span></div>' +
+      '<div class="pos" id="loadChart" style="height: clamp(150px, 20vw, 200px); margin: 34px 0 6px 34px; touch-action: pan-y">' +
+      '<div class="draw" style="position: absolute; inset: 0"><svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible" aria-hidden="true">' +
+      '<rect x="0" y="' + bandY + '" width="100" height="' + (bandB - bandY) + '" style="fill:var(--surface2)"></rect>' +
+      '<line x1="0" y1="100" x2="100" y2="100" style="stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke"></line>' + polyline(pts, 2.5) + '</svg></div>' +
+      '<span class="muted" style="position: absolute; left: -34px; top: ' + bandY + '%; transform: translateY(-50%); font-size: 13px">1.3</span>' +
+      '<span class="muted" style="position: absolute; left: -34px; top: ' + bandB + '%; transform: translateY(-50%); font-size: 13px">0.8</span>' +
+      '<span class="muted" style="position: absolute; right: 8px; top: ' + bandB + '%; transform: translateY(-130%); font-size: 13px">Safe zone</span>' +
+      '<div id="ldCursor" aria-hidden="true" style="position: absolute; top: 0; bottom: 0; width: 1px; background: var(--muted); opacity: .5"></div>' +
+      '<div id="ldDot" aria-hidden="true" style="position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; border: 3px solid var(--surface)"></div>' +
+      '<div id="ldTip" style="position: absolute; top: -34px; padding: 4px 12px; border-radius: 10px; background: var(--ink); color: var(--bg); font-size: 13px; font-weight: 600; white-space: nowrap"></div></div>' +
+      '<div class="muted" style="display: flex; justify-content: space-between; margin-left: 34px; font-size: 13px"><span>' + fmtShort(ser[0].n) + '</span><span>' + fmtShort(ser[Math.floor(ser.length / 3)].n) + '</span><span>' + fmtShort(ser[Math.floor(ser.length * 2 / 3)].n) + '</span><span>Today</span></div></div>';
+  } else {
+    right = '<div class="panel" style="border: 1.5px dashed var(--line); background: transparent; text-align: center; padding-top: 44px; padding-bottom: 44px"><span class="muted">A few more weeks of runs and this chart appears.</span></div>';
+  }
+  let extra = '';
+  if (ready) {
+    const weeks = [];
+    for (let w = 7; w >= 0; w--) { const m = mon - 7 * w; weeks.push({ m: m, t: C.sumLoad(m, m + 6), w: w }); }
+    const wmax = Math.max.apply(null, weeks.map(function(x){ return x.t; }).concat([1]));
+    extra = moreBtn('train') + (isMore('train') ? '<div class="panel expand" style="margin-top: 6px"><div style="font-weight: 700; font-size: 17px">Weekly load, last 8 weeks</div>' +
+      '<div style="display: flex; align-items: flex-end; gap: 10px; height: 110px; margin-top: 16px">' +
+      weeks.map(function(x, i){ return '<div class="grow" title="Week of ' + fmtShort(x.m) + ': load ' + Math.round(x.t) + (x.w === 0 ? ' so far' : '') + '" style="--i: ' + i + '; flex: 1; border-radius: 8px 8px 0 0; height: ' + Math.max(4, x.t / wmax * 100) + '%; background: ' + (x.w === 0 ? 'var(--ink2)' : 'var(--bar)') + '"></div>'; }).join('') + '</div>' +
+      '<div class="muted" style="display: flex; gap: 10px; font-size: 13px; margin-top: 6px">' + weeks.map(function(x){ return '<div style="flex: 1; text-align: center">' + new Date(x.m * 864e5).getUTCDate() + '</div>'; }).join('') + '</div></div>' : '');
+  }
+  $('c1body').innerHTML = '<div class="cgrid"><div><h2 class="chead fadein" id="c1h">' + head[0] + '</h2><p class="csub fadein">' + sub + '</p>' +
+    (ready ? '<div class="minis fadein"><div class="mini"><div class="mv">' + Math.round(lastS.a) + '</div><div class="ml">Last 7 days load</div></div>' +
+      '<div class="mini"><div class="mv">' + Math.round(lastS.c) + '</div><div class="ml">4 week average</div></div>' +
+      '<div class="mini"><div class="mv">' + C.cal.actual + '</div><div class="ml">km this week</div></div></div>' : '') +
+    '</div><div>' + right + '</div></div>' + extra;
+  if (ready) { S.hov = null; updateLoadHover(); }
+}
+
+// Moves the marker on the load chart without redrawing the whole chapter.
+function updateLoadHover(){
+  const ser = C.series; if (!ser.length || !$('ldTip')) return;
+  const i = S.hov == null ? ser.length - 1 : clamp(S.hov, 0, ser.length - 1), cur = ser[i];
+  const cx = ser.length > 1 ? i / (ser.length - 1) * 100 : 100;
+  $('ldCursor').style.left = cx + '%';
+  const dot = $('ldDot'); dot.style.left = cx + '%'; dot.style.top = C.ld.yOf(cur.v) + '%';
+  dot.style.background = cur.v > 1.5 ? 'var(--bad)' : cur.v > 1.3 ? 'var(--warn)' : 'var(--ink)';
+  const tip = $('ldTip'); tip.textContent = fmtDate(cur.n) + ' · ' + cur.v.toFixed(2);
+  tip.style.left = cx < 14 ? '0' : cx > 86 ? 'auto' : cx + '%';
+  tip.style.right = cx > 86 ? '0' : 'auto';
+  tip.style.transform = (cx >= 14 && cx <= 86) ? 'translateX(-50%)' : 'none';
+}
+
+/* ----- chapter 2: progress and race predictor ----- */
+function eqT(a, Dk){ return a.dur * Math.pow(Dk / a.km, 1.06) * EFFORT_FACTOR; }   // Riegel: T2 = T1 x (D2/D1)^1.06
+
+function progModel(){
+  const T = MODEL.T, mon = C.mon, N = C.nDays;
+  const runs = MODEL.acts.filter(function(a){ return a.type === 'run'; });
+  // ---- easy pace at the same heart rate: each easy run's pace is adjusted to the person's typical easy-run heart rate ----
+  const easy = runs.filter(function(a){ return a.kind === 'easy' && isNum(a.hr) && a.n >= T - 62; });
+  const hrTyp = easy.length ? median(easy.map(function(a){ return a.hr; })) : null;
+  const pts = [];
+  if (hrTyp != null) for (let w = 7; w >= 0; w--) {
+    const rs = easy.filter(function(a){ return a.n >= mon - 7 * w && a.n <= mon - 7 * w + 6; });
+    if (rs.length) pts.push({ w: w, v: mean(rs.map(function(a){ return a.pace * (1 + (a.hr - hrTyp) * 0.006); })) });
+  }
+  let prog;
+  if (pts.length >= 4 && N >= 28) {
+    const sp = sparkPts(pts.map(function(p){ return p.v; }), false), a = pts[0].v, b = pts[pts.length - 1].v, df = Math.round(a - b);
+    prog = { has: true, headline: df >= 4 ? 'You run ' + df + ' s per km faster at the same effort' : df > -4 ? 'Your easy pace is holding steady' : 'Your easy pace is a little slower',
+      sub: 'At a heart rate of ' + Math.round(hrTyp) + ' bpm you now run ' + mmss(b) + ' per km, against ' + mmss(a) + ' ' + pts[0].w + ' weeks ago.',
+      now: mmss(b), start: mmss(a), ago: pts[0].w, hr: Math.round(hrTyp), pts: sp.pts, dx: sp.dx, dy: sp.dy };
+  } else prog = { has: false, headline: 'Progress shows up after a few weeks', sub: 'Your easy pace at the same heart rate needs about 4 weeks of runs to mean something.' };
+
+  // ---- VO2 max: only when Garmin reported one (tile is hidden otherwise) ----
+  const v = MODEL.days.filter(function(d){ return isNum(d.vo2); }).slice(-8);
+  prog.vo2 = null;
+  if (v.length) {
+    const last = v[v.length - 1], weeks = Math.round((last.n - v[0].n) / 7);
+    prog.vo2 = { value: last.vo2.toFixed(1), delta: (v.length >= 2 && weeks >= 1) ? ((last.vo2 - v[0].vo2 >= 0 ? 'Up ' : 'Down ') + Math.abs(last.vo2 - v[0].vo2).toFixed(1) + ' in ' + weeks + ' weeks') : 'Latest from Garmin',
+      sp: (v.length >= 3) ? sparkPts(v.map(function(d){ return d.vo2; }), true) : null };
+  }
+
+  // ---- race predictor ----
+  let pred = { show: !C.isFit, has: false, name: C.setup.race };
+  if (!C.isFit) {
+    const estDist = C.distKm, G = C.G;
+    const hardAll = runs.filter(function(a){ return a.kind === 'tempo' && a.km >= 5; }).sort(function(a, b){ return b.n - a.n; });
+    const pool = hardAll.filter(function(a){ return a.n >= T - 42; });          // best recent hard effort: last 6 weeks
+    if (pool.length) {
+      const bestOf = function(list){ let b = null; list.forEach(function(a){ if (!b || eqT(a, estDist) < eqT(b, estDist)) b = a; }); return b; };
+      const b = bestOf(pool), est = eqT(b, estDist), conf = pool.some(function(a){ return a.n >= T - 28; });
+      const lo2 = est * (conf ? 0.975 : 0.965), hi2 = est * (conf ? 1.03 : 1.05);
+      const tr = [];
+      for (let w = 7; w >= 0; w--) { const n1 = Math.min(T, mon + 6 - 7 * w); const bb = bestOf(hardAll.filter(function(a){ return a.n <= n1 && a.n >= n1 - 41; })); if (bb) tr.push(eqT(bb, estDist)); }
+      const sp = tr.length >= 2 ? sparkPts(tr, false) : null;
+      let cmp = 'Set a goal time in setup to compare.';
+      if (G) { const diff = est - C.goalSec; cmp = Math.abs(diff) < 30 ? 'Right on your ' + hms(C.goalSec) + ' goal.' : durTxt(diff) + (diff > 0 ? ' slower' : ' faster') + ' than your ' + hms(C.goalSec) + ' goal.'; }
+      const rk = { '5K': '5K', '10K': '10K', 'Half marathon': 'Half', 'Marathon': 'Marathon' }[C.setup.race];
+      pred = { show: true, has: true, name: C.setup.race, time: est >= 3600 ? hms(est) : mmss(est), range: fmtR(lo2) + ' to ' + fmtR(hi2), pace: mmss(est / estDist), compare: cmp,
+        basis: 'your ' + fk(b.km) + ' km tempo on ' + fmtShort(b.n) + ' at ' + mmss(b.pace) + ' per km',
+        conf: conf ? 'Higher confidence' : 'Lower confidence', confNote: conf ? 'You ran a hard effort in the last 4 weeks.' : 'No hard effort in the last 4 weeks.',
+        dots: [true, conf, conf], sp: sp, t0: tr.length ? fmtR(tr[0]) : '', t1: tr.length ? fmtR(tr[tr.length - 1]) : '',
+        times: [['5K', 5, '5K'], ['10K', 10, '10K'], ['Half', 21.0975, 'Half'], ['Marathon', 42.195, 'Marathon']].map(function(t){ return { name: t[0], time: fmtR(eqT(b, t[1])), sel: t[2] === rk }; }),
+        efforts: pool.slice(0, 3).map(function(a){ return { text: fmtDate(a.n) + ': ' + fk(a.km) + ' km at ' + mmss(a.pace) + ' per km', val: fmtR(eqT(a, estDist)) }; }) };
+    }
+  }
+  return { prog: prog, pred: pred };
+}
+
+function renderProg(){
+  const m = progModel(), prog = m.prog, pred = m.pred;
+  let vo2 = '';
+  if (prog.vo2) {
+    const v = prog.vo2;
+    vo2 = '<div class="mini fadein" style="flex: 0 0 auto; min-width: 240px"><div style="display: flex; justify-content: space-between; align-items: center; gap: 14px">' +
+      '<div><div class="mv">' + v.value + '<span class="muted" style="font-size: 13px; font-weight: 500"> VO2 max</span></div><div class="ml">' + v.delta + '</div></div>' +
+      (v.sp ? '<div class="pos draw" style="width: 72px; height: 32px; flex: none" aria-hidden="true"><svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible">' + polyline(v.sp.pts, 1.75) + '</svg>' + dotAt(v.sp.dx, v.sp.dy, 8) + '</div>' : '') +
+      '</div></div>';
+  }
+  let predHtml = '';
+  if (pred.show) {
+    predHtml = '<section class="panel" aria-labelledby="predH"><div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap"><h3 id="predH" style="font-size: 17px; font-weight: 700">Race predictor, ' + esc(pred.name) + '</h3><span class="tag">Estimate</span></div>';
+    if (pred.has) {
+      predHtml += '<div style="display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-top: 10px"><span class="bigv">' + pred.time + '</span><span style="color: var(--ink2)">' + pred.pace + ' per km</span></div>' +
+        '<div style="color: var(--ink2); margin-top: 6px">Likely range ' + pred.range + '</div><div style="font-weight: 600; margin-top: 2px">' + pred.compare + '</div>' +
+        (pred.sp ? '<div class="pos draw" style="height: 56px; margin: 18px 0 4px" aria-hidden="true"><svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible">' + polyline(pred.sp.pts, 2.25) + '</svg>' + dotAt(pred.sp.dx, pred.sp.dy, 12, 2.5) + '</div>' +
+          '<div class="muted" style="display: flex; justify-content: space-between; font-size: 13px"><span>Earlier ' + pred.t0 + '</span><span>Now ' + pred.t1 + '</span></div>' : '') +
+        '<div class="muted" style="font-size: 14px; margin-top: 14px">Based on ' + pred.basis + '.</div>' +
+        '<div style="display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap"><span aria-hidden="true" style="display: inline-flex; gap: 3px">' +
+        pred.dots.map(function(on){ return '<span style="width: 18px; height: 6px; border-radius: 99px; background: ' + (on ? 'var(--ink2)' : 'var(--line)') + '"></span>'; }).join('') + '</span>' +
+        '<span style="font-weight: 700; font-size: 14px">' + pred.conf + '</span><span class="muted" style="font-size: 14px">' + pred.confNote + '</span></div>' +
+        '<div class="times" style="margin-top: 16px">' + pred.times.map(function(t){ return '<div class="tm' + (t.sel ? ' sel' : '') + '"><b>' + t.time + '</b><span>' + t.name + '</span></div>'; }).join('') + '</div>' +
+        '<p class="muted" style="font-size: 13px; margin-top: 12px">Calculated from recent hard runs. It moves with fitness, weather and course, and is not a promise.</p>';
+    } else {
+      predHtml += '<p style="margin-top: 14px; font-size: 18px; font-weight: 600">Needs one hard run of at least 5 km to estimate.</p>' +
+        '<p class="muted" style="margin-top: 6px">A tempo run at a steady hard effort works best. Your prediction will appear here after it syncs.</p>' +
+        '<p class="muted" style="font-size: 13px; margin-top: 12px">Estimates move with fitness, weather and course, and are not a promise.</p>';
+    }
+    predHtml += '</section>';
+  }
+  const trend = prog.has
+    ? '<div style="font-weight: 700; font-size: 17px">Easy pace at the same heart rate</div>' +
+      '<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-top: 10px"><span class="bigv">' + prog.now + '</span><span class="muted">per km at ' + prog.hr + ' bpm</span></div>' +
+      '<div class="pos draw" style="height: clamp(130px, 18vw, 180px); margin: 24px 0 6px"><svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible" aria-hidden="true"><line x1="0" y1="100" x2="100" y2="100" style="stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke"></line>' + polyline(prog.pts, 2.5) + '</svg>' + dotAt(prog.dx, prog.dy, 16, 3) + '</div>' +
+      '<div class="muted" style="display: flex; justify-content: space-between; font-size: 13px"><span>' + prog.ago + ' weeks ago ' + prog.start + '</span><span>Now ' + prog.now + '</span></div>'
+    : '<div style="font-weight: 700; font-size: 17px">Easy pace at the same heart rate</div><div style="border: 1.5px dashed var(--line); border-radius: 16px; text-align: center; padding: 44px 16px; margin-top: 16px"><span class="muted">Easy runs with a heart rate reading will build this trend.</span></div>';
+  const extra = pred.has ? moreBtn('prog') + (isMore('prog') ? '<div class="panel expand" style="margin-top: 6px"><div style="font-weight: 700; font-size: 17px">Efforts behind the estimate</div>' +
+    '<div style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px">' + pred.efforts.map(function(e){ return '<div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap"><span style="color: var(--ink2)">' + e.text + '</span><span style="font-weight: 700">Equals ' + e.val + '</span></div>'; }).join('') + '</div>' +
+    '<p class="muted" style="margin-top: 14px; font-size: 14px">Each hard run is scaled to your race distance, with a small allowance because a tempo run is not a full race effort. The fastest recent result is used.</p></div>' : '') : '';
+  $('c2body').innerHTML = '<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px 28px"><div style="flex: 1 1 420px; min-width: 0">' +
+    '<h2 class="chead fadein" id="c2h" style="max-width: 24ch">' + prog.headline + '</h2><p class="csub fadein">' + prog.sub + '</p></div>' + vo2 + '</div>' +
+    '<div class="pair" style="margin-top: 20px">' + predHtml + '<section class="panel" aria-label="Easy pace trend">' + trend + '</section></div>' + extra;
+}
+
+/* ----- chapter 3: runs with feedback ----- */
+function feedbackFor(r){
+  const T = MODEL.T, G = C.G, days = MODEL.days;
+  const planKind = TPL[C.perWeek][wd(r.n)], planKm = plannedKm(planKind, C.setup.race, phaseOf(C.raceN, r.n), weeksAgo(T, r.n));
+  let match, planTxt;
+  if (planKind === r.kind) {
+    const diff = (r.km - planKm) / planKm;
+    if (Math.abs(diff) <= 0.15) { match = 'match'; planTxt = 'Yes. The plan had a ' + fk(planKm) + ' km ' + KIND_LABEL[planKind].toLowerCase() + ' and you ran ' + fk(r.km) + ' km.'; }
+    else { match = 'partial'; planTxt = 'Close. The plan had ' + fk(planKm) + ' km and you ran ' + fk(r.km) + ' km (' + signed(Math.round(diff * 100), '%') + ').'; }
+  } else if (planKind === 'rest' || planKind === 'gym') { match = 'off'; planTxt = 'This was an extra run. Your plan had ' + (planKind === 'rest' ? 'a rest day' : 'gym') + ' that day.'; }
+  else { match = 'off'; planTxt = 'Not quite. The plan had a ' + KIND_LABEL[planKind].toLowerCase() + ' that day and you ran a ' + KIND_LABEL[r.kind].toLowerCase() + ' instead.'; }
+
+  const prior = MODEL.acts.filter(function(x){ return x.type === 'run' && x.kind === r.kind && x.n < r.n && x.n >= r.n - 42; });
+  let range = null;
+  if (G) range = paceRange(r.kind, G);
+  else if (prior.length >= 2) { const m = median(prior.map(function(x){ return x.pace; })); range = [m * 0.97, m * 1.03]; }
+  const rl = (G ? 'target range for ' : 'usual range for ') + PLURAL[r.kind];
+  let paceTxt, paceDot;
+  if (!range) { paceTxt = 'Not enough earlier runs of this type to compare yet.'; paceDot = 'var(--muted)'; }
+  else if (r.pace < range[0] - 0.5) { paceTxt = mmss(r.pace) + ' per km is ' + Math.round(range[0] - r.pace) + ' s faster than your ' + rl + ' (' + mmss(range[0]) + ' to ' + mmss(range[1]) + ').' + (r.kind === 'easy' ? ' A touch quick for an easy day.' : r.kind === 'tempo' ? ' Strong effort.' : ' Faster than a long run needs to be.'); paceDot = r.kind === 'tempo' ? 'var(--ok)' : 'var(--warn)'; }
+  else if (r.pace > range[1] + 0.5) { paceTxt = mmss(r.pace) + ' per km is ' + Math.round(r.pace - range[1]) + ' s slower than your ' + rl + ' (' + mmss(range[0]) + ' to ' + mmss(range[1]) + ').' + (r.kind === 'easy' ? ' Relaxed, which is fine.' : r.kind === 'tempo' ? ' A bit under target.' : ' Steady and sensible.'); paceDot = (r.kind === 'easy' || r.kind === 'long') ? 'var(--ok)' : 'var(--warn)'; }
+  else { paceTxt = mmss(r.pace) + ' per km, right inside your ' + rl + ' (' + mmss(range[0]) + ' to ' + mmss(range[1]) + ').'; paceDot = 'var(--ok)'; }
+  if (G) paceTxt += ' Goal pace is ' + mmss(G) + ' per km.';
+
+  // Pace fade and heart rate drift need the per-km splits. Without them we say so and carry on.
+  const hasSplits = r.hasSplits;
+  let fadePct = null, driftPct = null, fadeDot = 'var(--muted)', driftDot = 'var(--muted)', pacing;
+  if (hasSplits) {
+    fadePct = (r.p2 - r.p1) / r.p1 * 100; const secD = Math.round(r.p2 - r.p1);
+    const fadeOk = r.kind === 'long' ? 4 : 3, fadeWarn = r.kind === 'long' ? 6 : 5.5;
+    fadeDot = fadePct <= fadeOk ? 'var(--ok)' : fadePct <= fadeWarn ? 'var(--warn)' : 'var(--bad)';
+    const fadeTxt = fadePct < -1 ? 'Negative split: the second half was ' + Math.abs(secD) + ' s/km faster.' : fadePct <= 2 ? 'Even pacing, only ' + Math.abs(secD) + ' s/km between halves.' : fadePct <= 5 ? 'Slight fade: the second half was ' + secD + ' s/km slower.' : 'Big fade: the second half was ' + secD + ' s/km slower.';
+    driftPct = (r.h2 - r.h1) / r.h1 * 100;
+    const dOk = r.kind === 'long' ? 7 : 4, dWarn = r.kind === 'long' ? 9 : 7;
+    driftDot = driftPct <= dOk ? 'var(--ok)' : driftPct <= dWarn ? 'var(--warn)' : 'var(--bad)';
+    const driftTxt = driftPct < 3 ? 'Heart rate stayed steady.' : driftPct <= dOk ? 'Heart rate drift is normal for this kind of run.' : 'Heart rate crept up a lot. Heat, hydration or tiredness often cause that.';
+    pacing = [fadeTxt + ' ' + driftTxt, fadeDot === driftDot ? fadeDot : (isAttn(fadeDot) ? fadeDot : driftDot)];
+  } else pacing = ['Per km feedback needs more data. Garmin did not give kilometre splits for this run, so only pace and heart rate are shown.', 'var(--muted)'];
+
+  // How that morning's readiness affected the run
+  let rdTxt, rdDot = 'var(--muted)';
+  const qi = days.findIndex(function(d){ return d.n === r.n; });
+  const q = qi >= 0 ? readinessAt(days, qi) : null;
+  if (!q) rdTxt = 'No readiness data for that day.';
+  else if (q.learning) rdTxt = 'Your readiness baseline was not ready yet that day, so there is nothing to compare.';
+  else if (q.hrvPct == null) rdTxt = 'No HRV reading for that morning, so there is nothing to compare.';
+  else {
+    const hrTyp = prior.filter(function(x){ return isNum(x.hr); }).length >= 2 ? median(prior.filter(function(x){ return isNum(x.hr); }).map(function(x){ return x.hr; })) : null;
+    const hd = hrTyp && isNum(r.hr) ? r.hr - hrTyp : 0;
+    const ht = 'HRV was ' + q.d.hrv + ' ms (' + signed(Math.round(q.hrvPct), '%') + ' vs your normal). ';
+    if (q.overall === 'g') { rdTxt = ht + 'You were well recovered, so this run is a fair picture of your fitness.'; rdDot = 'var(--ok)'; }
+    else if (hd >= 3) { rdTxt = ht + 'Your heart rate ran about ' + Math.round(hd) + ' bpm above usual for this kind of run, which fits a lower readiness morning.'; rdDot = 'var(--warn)'; }
+    else { rdTxt = ht + 'Readiness was a bit low, yet your heart rate stayed close to usual. Nice work.'; rdDot = 'var(--ok)'; }
+  }
+  const baseH = { easy: 18, tempo: 42, long: 60 }[r.kind];
+  const hrs = Math.round(baseH * ((q && !q.learning && q.overall !== 'g') ? 1.25 : 1) / 6) * 6;
+  const recTxt = r.kind === 'easy' ? 'Easy day, so you bounce back quickly. About ' + hrs + ' hours is plenty before the next session.' : 'Give it about ' + hrs + ' hours before your next hard effort. Drink water and eat something with protein in the first hour.';
+  let tip;
+  if (r.kind === 'easy' && range && r.pace < range[0] - 0.5) tip = 'Slow down by 15 to 20 s per km on easy days. You should be able to chat in full sentences.';
+  else if (hasSplits && (fadePct > 5 || (r.kind === 'long' && fadePct > 4))) tip = 'Start the first 2 km about 10 s per km slower than feels natural, so you keep something for the second half.';
+  else if (hasSplits && driftPct > (r.kind === 'long' ? 9 : 7)) tip = 'Drink early and often. On warm days, run earlier or shorter to keep your heart rate steady.';
+  else if (match === 'off') tip = 'Extra runs are fine now and then. If you feel flat, protect your rest days so the hard days stay hard.';
+  else if (hasSplits && r.kind === 'tempo' && fadePct < -0.5) tip = 'A negative split is a great sign. Use the same plan on race day: start controlled, finish strong.';
+  else tip = 'Nicely controlled. Repeat this next week and let the fitness build.';
+
+  const mid = range ? (range[0] + range[1]) / 2 : null, dG = G ? r.pace - G : null;
+  const mkS = function(label, value, unit, sub, dot, word){ return { label: label, value: value, unit: unit, sub: sub, dot: dot, word: word, attn: isAttn(dot) }; };
+  const stats = [
+    mkS(G ? 'Pace vs goal pace' : 'Pace vs your usual', mmss(r.pace), '/km', G ? ('Goal pace ' + mmss(G) + ', ' + (dG <= 0 ? Math.round(-dG) + ' s faster' : Math.round(dG) + ' s slower')) : (mid ? 'Usual ' + mmss(mid) + ' /km' : 'No comparison yet'), paceDot, 'Check pace'),
+    hasSplits ? mkS('Pace fade', signed(Number(fadePct.toFixed(1)), '%'), '', mmss(r.p1) + ' then ' + mmss(r.p2) + ' per km', fadeDot, fadePct <= (r.kind === 'long' ? 6 : 5.5) ? 'Slight fade' : 'Big fade') : mkS('Pace fade', '–', '', 'Needs kilometre splits', 'var(--muted)', ''),
+    hasSplits ? mkS('Heart rate drift', signed(Number(driftPct.toFixed(1)), '%'), '', Math.round(r.h1) + ' then ' + Math.round(r.h2) + ' bpm', driftDot, driftPct <= (r.kind === 'long' ? 9 : 7) ? 'Elevated' : 'High') : mkS('Heart rate drift', '–', '', 'Needs kilometre splits', 'var(--muted)', '')
+  ];
+  const R = function(k, v, dot){ return { k: k, v: v, dot: dot, attn: isAttn(dot) }; };
+  const planDot = match === 'match' ? 'var(--ok)' : match === 'partial' ? 'var(--warn)' : 'var(--muted)';
+  return { match: match, stats: stats,
+    key: [R('Plan', planTxt, planDot), R('Pace', paceTxt, paceDot), R('Next time', tip, 'var(--ink)')],
+    rest: [R('Pacing', pacing[0], pacing[1]), R('Readiness', rdTxt, rdDot), R('Recovery', recTxt, 'var(--ink)')] };
+}
+
+function renderRuns(){
+  const runsAll = MODEL.acts.filter(function(a){ return a.type === 'run'; }).sort(function(a, b){ return b.n - a.n; }).slice(0, 5);
+  const fbs = runsAll.map(feedbackFor), nR = runsAll.length, nM = fbs.filter(function(f){ return f.match === 'match'; }).length;
+  const headline = nR === 0 ? 'No runs yet' : nM === nR ? (nR === 1 ? 'Your last run matched the plan' : 'Your last ' + nR + ' runs matched the plan') : nM === 0 ? (nR === 1 ? 'Your last run strayed from the plan' : 'Your last ' + nR + ' runs strayed from the plan') : nM + ' of your last ' + nR + ' runs matched the plan';
+  const row = function(x){ return '<div class="fbrow' + (x.exp ? ' expand' : '') + '"><div class="fbk">' + x.k + (x.attn ? '<span class="dot" style="background: ' + x.dot + '; margin-top: 9px"></span>' : '') + '</div><div class="fbv">' + x.v + '</div></div>'; };
+  const list = runsAll.map(function(r, i){
+    const fb = fbs[i], open = S.openRun === String(r.id), moreOn = S.moreRun === String(r.id);
+    return '<div style="border-top: 1px solid ' + (i === 0 ? 'transparent' : 'var(--line)') + '"><button class="runrow" data-act="run" data-id="' + r.id + '" aria-expanded="' + open + '">' +
+      '<div style="flex: 1 1 110px; min-width: 0"><div style="font-weight: 700">' + fmtDate(r.n) + '</div><div class="muted" style="font-size: 14px">' + KIND_LABEL[r.kind] + '</div></div>' +
+      '<span class="rs">' + fk(r.km) + ' <small>km</small></span><span class="rs">' + mmss(r.pace) + ' <small>/km</small></span><span class="rs">' + (isNum(r.hr) ? Math.round(r.hr) : '–') + ' <small>bpm</small></span>' +
+      '<span class="muted" style="flex: 0 0 96px; font-size: 14px">' + (fb.match === 'match' ? 'On plan' : fb.match === 'partial' ? 'Close to plan' : 'Off plan') + '</span>' +
+      '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="transform: ' + (open ? 'rotate(180deg)' : 'rotate(0deg)') + '; flex: none"><path d="M6 9l6 6 6-6" style="fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round"></path></svg></button>' +
+      (open ? '<div class="fb expand">' + fb.key.map(row).join('') + '<div><button class="more" style="margin-top: 0" data-act="runMore" data-id="' + r.id + '" aria-expanded="' + moreOn + '">' + (moreOn ? 'Show less' : 'More detail') + '</button></div>' +
+        (moreOn ? '<div class="tiles3 expand">' + fb.stats.map(function(st){
+          return '<div class="stat"><div class="muted" style="font-size: 14px">' + st.label + '</div><div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em">' + st.value + '<span class="muted" style="font-size: 14px; font-weight: 500"> ' + st.unit + '</span></div>' +
+            '<div class="muted" style="font-size: 14px">' + st.sub + '</div>' + (st.attn ? '<div style="display: flex; align-items: center; gap: 7px; margin-top: 6px; font-size: 14px; font-weight: 700"><span class="dot" style="background: ' + st.dot + '"></span>' + st.word + '</div>' : '') + '</div>'; }).join('') + '</div>' +
+          fb.rest.map(function(x){ x.exp = true; return row(x); }).join('') : '') + '</div>' : '') + '</div>';
+  }).join('');
+  $('c3body').innerHTML = '<div class="cgrid r48"><div><h2 class="chead fadein" id="c3h">' + headline + '</h2><p class="csub fadein">' + (nR ? 'Open a run to see how it went.' : 'Your runs will appear here after your first sync.') + '</p></div>' +
+    '<div class="panel" style="padding-top: 6px; padding-bottom: 6px">' + (list || '<p class="muted" style="padding: 18px 4px">No runs in the last 90 days.</p>') + '</div></div>';
+}
+
+/* ----- chapter 4: sleep and cycle ----- */
+function sleepModel(){
+  const days = MODEL.days;
+  let si = days.length - 1; while (si > 0 && !isNum(days[si].score)) si--;
+  const d0 = days[si];
+  if (!isNum(d0.score)) return null;
+  const upTo = days.slice(0, si + 1);
+  const prev28 = days.slice(Math.max(0, si - 28), si);
+  const dv = prev28.filter(function(x){ return isNum(x.deep); }), rv = prev28.filter(function(x){ return isNum(x.rem); });
+  const avgDeep = dv.length >= 7 ? mean(dv.map(function(x){ return x.deep; })) : null, avgRem = rv.length >= 7 ? mean(rv.map(function(x){ return x.rem; })) : null;
+  const l7 = upTo.slice(-7).filter(function(x){ return isNum(x.bed); });
+  const bedMed = l7.length ? median(l7.map(function(x){ return x.bed; })) : null, bedSd = l7.length >= 4 ? sd(l7.map(function(x){ return x.bed; })) : null;
+  const stage = function(name, v, avg){
+    if (!isNum(v)) return null;
+    const mx = Math.max(v, avg || 0) * 1.3, df = avg != null ? Math.round(v - avg) : null;
+    return { name: name, value: fmtHM(v), fill: v / mx * 100, tick: avg != null ? avg / mx * 100 : 0, hasTick: avg != null,
+      delta: df == null ? 'Average still learning' : df === 0 ? 'Right on your average' : Math.abs(df) + ' min ' + (df > 0 ? 'above' : 'below') + ' your average' };
+  };
+  const tk = C.todayKind, sl = C.sLabel;
+  let link;
+  if (d0.score >= 70) link = tk === 'rest' ? 'A solid night, a good base for your next session.' : 'A solid night. You are set for today’s ' + sl + '.';
+  else if (d0.score >= 58) link = 'Decent sleep. Today’s ' + sl + ' is fine, just keep the effort honest.';
+  else link = tk === 'rest' ? 'A short night. Keep your rest day properly restful.' : 'A short night. Treat today’s ' + sl + ' as easy, or swap it for rest.';
+  let tip;
+  if (isNum(d0.total) && d0.total < 420 && bedMed != null) tip = 'Aim to be asleep by ' + fmtClock(bedMed - 30) + ' to get back to about 7 and a half hours.';
+  else if (bedSd != null && bedSd > 30) tip = 'Pick one bedtime around ' + fmtClock(bedMed) + ' and hold it, even on weekends.';
+  else if (avgDeep != null && isNum(d0.deep) && d0.deep < avgDeep - 12) tip = 'Keep the room cool and skip screens for 30 minutes before bed to help deep sleep.';
+  else tip = 'Keep your wind down routine steady. It is working.';
+  const nights = []; for (let k = 13; k >= 0; k--) { const x = days[si - k]; nights.push(x && isNum(x.score) ? x : null); }
+  const have = nights.filter(Boolean);
+  const avgScore = have.length ? mean(have.map(function(x){ return x.score; })) : null;
+  const bars = nights.map(function(x, i){
+    if (!x) return { i: i, h: 6, bg: 'var(--line)', tip: 'No data' };
+    return { i: i, h: clamp((x.score - 40) / 60 * 100, 8, 100), bg: x.score < 58 ? 'var(--bad)' : x.score < 70 ? 'var(--warn)' : (i === 13 ? 'var(--ink)' : 'var(--bar)'), tip: fmtDate(x.n) + ': ' + (isNum(x.total) ? fmtHM(x.total) + ', ' : '') + 'score ' + x.score };
+  });
+  return { d0: d0, headline: d0.score >= 70 ? 'You slept well last night' : d0.score >= 58 ? 'Last night’s sleep was fair' : 'Last night’s sleep was short', link: link,
+    total: isNum(d0.total) ? fmtHM(d0.total) : '–', score: d0.score, stages: [stage('Deep', d0.deep, avgDeep), stage('REM', d0.rem, avgRem)].filter(Boolean),
+    bed: bedSd == null ? 'Still learning your normal' : (bedSd <= 25 ? 'Consistent' : bedSd <= 45 ? 'A bit varied' : 'Irregular') + ', within about ' + Math.round(bedSd) + ' min of ' + fmtClock(bedMed),
+    tip: tip, bars: bars, nights: have.length + ' of 14 nights', hasAvg: have.length >= 5, avgY: avgScore != null ? clamp((avgScore - 40) / 60 * 100, 8, 100) : 0 };
+}
+
+// Cycle: only from a date entered by the person (Garmin's cycle response is not mapped yet). Never changes the plan on its own.
+function cycleModel(){
+  const T = MODEL.T, on = !!(S.setup && S.setup.cycle);
+  let cyc = null;
+  const manual = store(KEY + 'cycleManual');
+  if (manual && manual.date) cyc = { source: 'manual', lastStart: manual.date, len: 28 };
+  else if (SRC.demo) cyc = { source: 'demo', lastStart: isoOf(T - 9), len: 28 };
+  const m = { on: on, has: false, soon: null, headline: 'Add your cycle', sub: 'No cycle data yet. Add your last period start below.' };
+  if (cyc && cyc.lastStart) {
+    const ls = dn(cyc.lastStart), len = cyc.len || 28, since = T - ls;
+    if (since >= 0) {
+      const day = (since % len) + 1, nextN = ls + len * (Math.floor(since / len) + 1);
+      const ph = day <= 5 ? ['Period', 'Go by feel. Easy runs and gentle movement are all good.'] : day <= 13 ? ['Follicular phase', 'Energy often feels steady and strong. A good window for harder sessions.'] : day <= 16 ? ['Mid cycle', 'Many people feel strong around now. Warm up well, joints can feel a little looser.'] : ['Luteal phase', 'Resting heart rate can sit a touch higher and heat can feel harder. That is normal, not lost fitness.'];
+      const dd = []; for (let i = 1; i <= len; i++) dd.push({ i: i - 1, h: i === day ? 100 : 55, bg: i <= 5 ? 'var(--period)' : i === day ? 'var(--ink)' : 'var(--bar)' });
+      m.has = true; m.soon = { days: nextN - T, n: nextN };
+      m.headline = 'Day ' + day + ' of your cycle, ' + ph[0].toLowerCase(); m.sub = 'Next period expected around ' + fmtShort(nextN) + '.'; m.note = ph[1]; m.days = dd;
+      m.source = cyc.source === 'demo' ? 'Sample date for the demo' : 'Entered by you';
+    }
+  }
+  return m;
+}
+
+function renderSleep(){
+  const sm = sleepModel(), cy = C.cyc;
+  let left;
+  if (!sm) {
+    left = '<section class="panel" aria-label="Sleep"><div class="muted">No sleep has been recorded yet. Wear your watch overnight and sync.</div></section>';
+  } else {
+    left = '<section class="panel" aria-label="Sleep"><div style="display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap"><span class="bigv sm">' + sm.total + '</span><span class="muted">sleep score ' + sm.score + '</span></div>' +
+      '<div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px">' + sm.stages.map(function(g){
+        return '<div><div style="display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 15px"><span><span style="font-weight: 700">' + g.name + '</span> ' + g.value + '</span><span class="muted">' + g.delta + '</span></div>' +
+          '<div class="pos" aria-hidden="true" style="height: 8px; border-radius: 99px; background: var(--surface2); margin-top: 6px"><div style="height: 100%; width: ' + g.fill + '%; background: var(--ink2); border-radius: 99px"></div>' +
+          (g.hasTick ? '<div style="position: absolute; top: -4px; left: ' + g.tick + '%; width: 3px; height: 16px; margin-left: -1px; border-radius: 2px; background: var(--ink)"></div>' : '') + '</div></div>'; }).join('') + '</div>' +
+      '<div class="pos" style="margin-top: 20px"><div style="display: flex; align-items: flex-end; gap: 5px; height: 80px">' +
+      sm.bars.map(function(b){ return '<div class="grow" title="' + esc(b.tip) + '" style="--i: ' + b.i + '; flex: 1; border-radius: 4px 4px 0 0; height: ' + b.h + '%; background: ' + b.bg + '"></div>'; }).join('') + '</div>' +
+      (sm.hasAvg ? '<div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: ' + sm.avgY + '%; border-top: 1.5px dashed var(--muted); opacity: .7"></div>' : '') + '</div>' +
+      '<div class="muted" style="display: flex; justify-content: space-between; gap: 10px; font-size: 13px; margin-top: 6px"><span>' + sm.nights + '</span><span>Dashed line is your average</span></div>' + moreBtn('sleep') +
+      (isMore('sleep') ? '<div class="expand" style="display: flex; flex-direction: column; gap: 12px; padding-top: 6px; border-top: 1px solid var(--line)">' +
+        '<div style="display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-top: 12px"><span style="font-weight: 700">Bedtime</span><span class="muted">' + sm.bed + '</span></div>' +
+        '<div><span style="font-weight: 700">Tonight </span><span style="color: var(--ink2)">' + sm.tip + '</span></div></div>' : '') + '</section>';
+  }
+  let cycle = '';
+  if (cy.on) {
+    const showEntry = isMore('cyc') || !cy.has;
+    cycle = '<section class="panel" aria-labelledby="cycH"><h3 id="cycH" style="font-size: clamp(22px, 2.6vw, 28px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15">' + cy.headline + '</h3><p style="color: var(--ink2); margin-top: 6px">' + cy.sub + '</p>' +
+      (cy.has ? '<div aria-hidden="true" style="display: flex; gap: 3px; align-items: flex-end; height: 40px; margin-top: 18px">' + cy.days.map(function(c){ return '<div class="grow" style="--i: ' + c.i + '; flex: 1; height: ' + c.h + '%; border-radius: 4px; background: ' + c.bg + '"></div>'; }).join('') + '</div>' +
+        '<div class="muted" style="font-size: 13px; margin-top: 8px">Pink days are your period. The tall dark bar is today. ' + cy.source + '.</div><p style="margin-top: 14px">' + cy.note + '</p>' : '') +
+      '<button class="more" data-act="more" data-k="cyc" aria-expanded="' + showEntry + '">' + (cy.has ? (isMore('cyc') ? 'See less' : 'See more') : 'Add a date') + '</button>' +
+      (showEntry ? '<div class="expand" style="padding-top: 6px; border-top: 1px solid var(--line)"><label for="pd" style="font-weight: 700; display: block; margin-top: 12px">Add period start manually</label>' +
+        '<div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px"><input id="pd" class="field" type="date" value="' + esc(S.manualDate) + '" max="' + isoOf(MODEL.T) + '" data-set="manualDate" style="flex: 1 1 160px; width: auto">' +
+        '<button class="btn" data-act="saveCycle">Save date</button></div><div class="muted" style="font-size: 13px; margin-top: 8px">' + esc(S.msg || 'Saved in this browser only. Cycle tracking never changes your plan by itself.') + '</div></div>' : '') + '</section>';
+  }
+  $('c4body').innerHTML = '<h2 class="chead fadein" id="c4h" style="max-width: 26ch">' + (sm ? sm.headline : 'No sleep recorded yet') + '</h2><p class="csub fadein">' + (sm ? sm.link : '') + '</p>' +
+    '<div class="pair" style="margin-top: 20px; align-items: flex-start">' + left + cycle + '</div>';
+}
+
+function renderFoot(){
+  $('foot').innerHTML = '<p style="text-align: center">Reads ' + (SRC.demo ? 'sample_data.js (made-up data)' : 'garmin_data.js') + ' from your computer, refreshed by a script from your Garmin account. Estimates and suggestions are guides, not medical advice.</p>';
+}
+
+/* ----- clicks and typing for the chapters ----- */
+window.onAct = function(act, b){
+  if (act === 'more') { const k = b.getAttribute('data-k'); S.more[k] = !S.more[k]; if (k === 'train') renderTrain(); else if (k === 'prog') renderProg(); else renderSleep(); }
+  else if (act === 'run') { const id = b.getAttribute('data-id'); S.openRun = S.openRun === id ? null : id; S.moreRun = null; renderRuns(); }
+  else if (act === 'runMore') { const id = b.getAttribute('data-id'); S.moreRun = S.moreRun === id ? null : id; renderRuns(); }
+  else if (act === 'saveCycle') {
+    const v = S.manualDate;
+    if (!v || dn(v) > MODEL.T || dn(v) < MODEL.T - 120) { S.msg = 'Pick a date from the last four months.'; renderSleep(); return; }
+    store(KEY + 'cycleManual', { date: v }); S.msg = 'Saved. Your cycle section now uses this date.';
+    C.cyc = cycleModel(); C.cycleSoon = C.cyc.soon; renderSleep(); renderBanners();
+  }
+};
+// Hovering (or tapping) the load chart moves its marker.
+function loadPointer(e){
+  const ch = e.target.closest ? e.target.closest('#loadChart') : null;
+  if (!ch) { if (S.hov != null) { S.hov = null; updateLoadHover(); } return; }
+  const r = ch.getBoundingClientRect(), x = clamp((e.clientX - r.left) / r.width, 0, 1);
+  S.hov = Math.round(x * Math.max(1, C.series.length - 1)); updateLoadHover();
+}
+document.addEventListener('mousemove', loadPointer);
+document.addEventListener('click', function(e){ if (e.target.closest && e.target.closest('#loadChart')) loadPointer(e); });
+
+/* ============================================================================
+   7. SHOWING, HIDING, AND EVENTS
+   ========================================================================== */
+function renderAll(){
+  recompute();
+  renderHeader(); renderNotice();
+  if (S.view === 'setup') {
+    $('setupView').classList.remove('hidden'); $('dashView').classList.add('hidden');
+    renderSetup(); window.scrollTo(0, 0); return;
+  }
+  $('setupView').classList.add('hidden'); $('dashView').classList.remove('hidden');
+  renderHero(); renderStrip(); renderMetrics(); renderBanners(); renderWeek(); renderChapters(); renderFoot();
+  watchReveal();
+}
+
+// Scroll reveal: sections get class "in" when they come into view (this starts their animations).
+let IO = null;
+function watchReveal(){
+  const els = document.querySelectorAll('[data-reveal]');
+  if (typeof IntersectionObserver === 'undefined') { for (let i = 0; i < els.length; i++) els[i].classList.add('in'); return; }
+  if (!IO) IO = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if (e.isIntersecting) { e.target.classList.add('in'); IO.unobserve(e.target); } });
+  }, { threshold: 0, rootMargin: '0px 0px -12% 0px' });
+  for (let i = 0; i < els.length; i++) if (!els[i].__obs && !els[i].classList.contains('in')) { els[i].__obs = 1; IO.observe(els[i]); }
+}
+
+function saveSetup(){ store(KEY + 'setup', S.setup); }
+function patchSetup(p){ S.setup = Object.assign({}, S.setup, p); saveSetup(); }
+
+document.addEventListener('click', function(e){
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const act = b.getAttribute('data-act');
+  if (act === 'openSetup') { S.view = 'setup'; renderAll(); }
+  else if (act === 'closeSetup') { S.view = 'dash'; S.openRun = null; S.firstRun = false; saveSetup(); renderAll(); }
+  else if (act === 'perMinus') { patchSetup({ perWeek: clamp(S.setup.perWeek - 1, 3, 6) }); renderSetup(); }
+  else if (act === 'perPlus') { patchSetup({ perWeek: clamp(S.setup.perWeek + 1, 3, 6) }); renderSetup(); }
+  else if (act === 'metric') { const k = b.getAttribute('data-key'); S.metric = S.metric === k ? null : k; renderMetricDetail(); }
+  else if (window.onAct) window.onAct(act, b, e);
+});
+
+document.addEventListener('change', function(e){
+  const el = e.target; const f = el.getAttribute && el.getAttribute('data-set'); if (!f) return;
+  if (f === 'manualDate') { S.manualDate = el.value; return; }       // period date typed in the cycle panel
+  if (f === 'race') {
+    const p = { race: el.value };
+    if (el.value !== 'General fitness') {
+      if (!S.setup.date || dn(S.setup.date) < MODEL.T) p.date = isoOf(MODEL.T + 84);
+      if (((+S.setup.h || 0) * 3600 + (+S.setup.m || 0) * 60 + (+S.setup.s || 0)) === 0) { const g = DEFAULT_GOAL[el.value]; p.h = g[0]; p.m = g[1]; p.s = g[2]; }
+    }
+    patchSetup(p);
+  }
+  else if (f === 'date') patchSetup({ date: el.value });
+  else if (f === 'h') patchSetup({ h: clamp(parseInt(el.value, 10) || 0, 0, 9) });
+  else if (f === 'm') patchSetup({ m: clamp(parseInt(el.value, 10) || 0, 0, 59) });
+  else if (f === 's') patchSetup({ s: clamp(parseInt(el.value, 10) || 0, 0, 59) });
+  else if (f === 'cycle') patchSetup({ cycle: !!el.checked });
+  renderSetup();
+});
+
+/* ============================================================================
+   8. START
+   ========================================================================== */
+(function start(){
+  if (!SRC) {
+    $('fatal').innerHTML = '<div class="err"><b>No data found.</b> Neither garmin_data.js nor sample_data.js could be loaded. Make sure dashboard.html sits in the same folder as them, then run <code>python3 sync.py</code>.</div>';
+    return;
+  }
+  try {
+    MODEL = buildModel(SRC.raw);
+    const saved = store(KEY + 'setup');
+    S.setup = Object.assign(defaultSetup(), saved || {});
+    S.firstRun = !saved && !SRC.demo;              // first visit with real data: begin on the setup screen
+    S.view = S.firstRun ? 'setup' : 'dash';
+    renderAll();
+  } catch (err) {
+    $('fatal').innerHTML = '<div class="err"><b>Something went wrong reading the data.</b> Try running <code>python3 sync.py</code> again. (' + esc(err && err.message) + ')</div>';
+    if (window.console) console.error(err);
+  }
+})();
+</script>
+</body>
+</html>
